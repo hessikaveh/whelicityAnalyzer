@@ -277,6 +277,9 @@ private:
     TLorentzVector PosLep;
     TLorentzVector NegLep;
     TLorentzVector DiLep;
+    std::vector<double> *SlimmedMuon_Pt;
+    bool b_Mu1=0,b_Mu2=0,b_ElEl1=0,b_ElEl2=0,b_MuEl1=0,b_MuEl2=0,b_ElMu1=0,b_ElMu2=0,b_ElMu3=0,b_ElMu4=0;
+
 
 
 };
@@ -428,7 +431,6 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 
     }
-    bool b_Mu1=0,b_Mu2=0,b_ElEl1=0,b_ElEl2=0,b_MuEl1=0,b_MuEl2=0,b_ElMu1=0,b_ElMu2=0,b_ElMu3=0,b_ElMu4=0;
     for (unsigned int i = 0, n = trigResults->size(); i < n; ++i) {
         std::string nameHLT,st;
         nameHLT = trigNames.triggerName(i);
@@ -552,8 +554,9 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     pat::Muon negMu;
 
 
-
     for (pat::MuonCollection::const_iterator mup = muons->begin();mup != muons->end(); ++mup){
+        SlimmedMuon_Pt->push_back(mup->pt());
+
         if( !(mup->charge() > 0)) continue;
         if( !(mup->pt() > 20.0 )) continue;
         if( !(fabs(mup->eta()) < 2.4 )) continue;
@@ -1944,7 +1947,8 @@ void MiniAnalyzer::beginJob() {
     //initialize the tree
     f_outFile->cd();
     t_outTree =  new TTree("tree","tr");
-
+    t_outTree->Branch("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v",&b_Mu1);
+    t_outTree->Branch("SlimmedMuon_Pt",&SlimmedMuon_Pt);
 //    t_outTree->Branch("TotalNumberOfEvents",&NEvent,"TotalNumberOfEvents/I");
 //    t_outTree->Branch("NGoodvtx",&nGoodVtxs,"NGoodvtx/I");
 //    t_outTree->Branch("RecoCos",&RecoCos);
