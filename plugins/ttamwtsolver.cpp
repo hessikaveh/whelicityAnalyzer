@@ -23,7 +23,7 @@ TtAMWTSolver::TtAMWTSolver(bool isData, const double b, const double e, const do
 {
     if (isData) nbrJetSmear = 500;
     else nbrJetSmear = 500;
-    cout << "Number of iterations: " << nbrJetSmear<<endl;
+//    cout << "Number of iterations: " << nbrJetSmear<<endl;
 
     //PDF Initialization
     string path;
@@ -47,13 +47,13 @@ TtAMWTSolver::TtAMWTSolver(bool isData, const double b, const double e, const do
     rand3 = new TRandom3();
 
     //    bool doGaussian = true;
-    cout <<ptFileName<<endl;
+//    cout <<ptFileName<<endl;
     ptResol  = new JME::JetResolution(ptFileName);
 
-    cout <<phiFileName<<endl;
+//    cout <<phiFileName<<endl;
     phiResol = new JME::JetResolution(phiFileName);
 
-    cout << SFFileName <<endl;
+//    cout << SFFileName <<endl;
     SF = new JME::JetResolutionScaleFactor(SFFileName);
 //    std::uint32_t seed = (std::uint32_t) 37428479;
 
@@ -116,7 +116,7 @@ TtAMWTSolver::NeutrinoSolution TtAMWTSolver::NuSolver(const TLorentzVector &LV_l
                 //TopRec(LV_l, LV_l_, LV_b, LV_b_, q_sol[isol]);
                 TopRec(LV_l, LV_l_, jets_by_pt_sm[0], jets_by_pt_sm[1], q_sol[isol]);
                 double weight = get_weight(jets_by_pt_sm[0],jets_by_pt_sm[1],LV_l,LV_l_,LV_n,LV_n_,mt);
-		cout <<"weight of mt answer: " <<  weight << endl;
+//		cout <<"weight of mt answer: " <<  weight << endl;
                 h_topMass->Fill(mt,weight);
                 if (weight > weightmaxdum) {
                     weightmaxdum =weight;

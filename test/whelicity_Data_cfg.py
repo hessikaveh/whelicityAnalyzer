@@ -19,6 +19,19 @@ process.options = cms.untracked.PSet(
     allowUnscheduled = cms.untracked.bool(True),
     wantSummary      = cms.untracked.bool(True)
 )
+process.noscraping = cms.EDFilter(
+    "FilterOutScraping",
+    applyfilter = cms.untracked.bool(True),
+    debugOn = cms.untracked.bool(False),
+    numtrack = cms.untracked.uint32(10),
+    thresh = cms.untracked.double(0.25)
+    )
+
+##____________________________________________________________________________||
+process.load('CommonTools/RecoAlgos/HBHENoiseFilter_cfi')
+process.HBHENoiseFilter.minIsolatedNoiseSumE = cms.double(999999.)
+process.HBHENoiseFilter.minNumIsolatedNoiseChannels = cms.int32(999999)
+process.HBHENoiseFilter.minIsolatedNoiseSumEt = cms.double(999999.)
 ## configure geometry & conditions
 process.load("Configuration.Geometry.GeometryRecoDB_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")

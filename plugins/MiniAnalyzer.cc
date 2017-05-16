@@ -308,7 +308,7 @@ MiniAnalyzer::MiniAnalyzer(const edm::ParameterSet& iConfig):
 
 {
     // initializing the solver
-    amwtSolver = new TtAMWTSolver(isData,172.4,172.6,0.1,80.4,4.8,ptRes,phiRes,sfRes);
+    amwtSolver = new TtAMWTSolver(isData,172.44,172.50,0.1,80.4,4.8,ptRes,phiRes,sfRes);
 
     //    std::vector<double> nupars= {30.7137,56.2880,23.0744,59.1015,24.9145};
     //    amwtsolver = new TtFullLepKinSolver(172.5,172.5,10,nupars,80.4,4.8);
@@ -585,7 +585,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             reco::MuonPFIsolation pfR04 = mum->pfIsolationR04();
             coriso2 = pfR04.sumChargedHadronPt + std::max(0., pfR04.sumNeutralHadronEt+pfR04.sumPhotonEt-0.5*pfR04.sumPUPt);
         }
-        if (!(coriso2/mum->pt() <  0.15)) continue;
+        if (!(coriso2/mum->pt() <  0.12)) continue;
         if(mum->pt() > negMu.pt() ) negMu = *mum;
         h_PtMu->Fill(mum->pt(),theWeight);
         h_ALS_etaLMuMu->Fill(negMu.eta(),theWeight);
@@ -848,7 +848,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
             DiLepMass = posMu.mt() + negMu.mt();
             h_AMS_mLepMuMu->Fill(DiLep.M(),theWeight);
-            h_AMS_mLepDiLep->Fill(DiLepMass,theWeight);
+            h_AMS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_AMS_ptLepMuMu->Fill(posMu.pt(),theWeight);
             h_AMS_ptLepDiLep->Fill(posMu.pt(),theWeight);
             h_AMS_ptLepMuMu->Fill(negMu.pt(),theWeight);
@@ -860,7 +860,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         {
             DiLepMass = posEl.mt() + negEl.mt();
             h_AMS_mLepElEl->Fill(DiLep.M(),theWeight);
-            h_AMS_mLepDiLep->Fill(DiLepMass,theWeight);
+            h_AMS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_AMS_ptLepElEl->Fill(posEl.pt(),theWeight);
             h_AMS_ptLepDiLep->Fill(posEl.pt(),theWeight);
             h_AMS_ptLepElEl->Fill(negEl.pt(),theWeight);
@@ -874,7 +874,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         {
             DiLepMass = posEl.mt() + negMu.mt();
             h_AMS_mLepElMu->Fill(DiLep.M(),theWeight);
-            h_AMS_mLepDiLep->Fill(DiLepMass,theWeight);
+            h_AMS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_AMS_ptLepElMu->Fill(posEl.pt(),theWeight);
             h_AMS_ptLepDiLep->Fill(posEl.pt(),theWeight);
             h_AMS_ptLepElMu->Fill(negMu.pt(),theWeight);
@@ -887,7 +887,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         {
             DiLepMass = posMu.mt() + negEl.mt();
             h_AMS_mLepElMu->Fill(DiLep.M(),theWeight);
-            h_AMS_mLepDiLep->Fill(DiLepMass,theWeight);
+            h_AMS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_AMS_ptLepElMu->Fill(posMu.pt(),theWeight);
             h_AMS_ptLepDiLep->Fill(posMu.pt(),theWeight);
             h_AMS_ptLepElMu->Fill(negEl.pt(),theWeight);
@@ -916,7 +916,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
             DiLepMass = posMu.mt() + negMu.mt();
             h_ABS_mLepMuMu->Fill(DiLep.M(),theWeight);
-            h_ABS_mLepDiLep->Fill(DiLepMass,theWeight);
+            h_ABS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_ABS_ptLepMuMu->Fill(posMu.pt(),theWeight);
             h_ABS_ptLepDiLep->Fill(posMu.pt(),theWeight);
             h_ABS_ptLepMuMu->Fill(negMu.pt(),theWeight);
@@ -940,7 +940,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_ABS_ptLeadingJetDiLep->Fill(bjets.at(0).pt(),theWeight);
             DiLepMass = posEl.mt() + negEl.mt();
             h_ABS_mLepElEl->Fill(DiLep.M(),theWeight);
-            h_ABS_mLepDiLep->Fill(DiLepMass,theWeight);
+            h_ABS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_ABS_ptLepElEl->Fill(posEl.pt(),theWeight);
             h_ABS_ptLepDiLep->Fill(posEl.pt(),theWeight);
             h_ABS_ptLepElEl->Fill(negEl.pt(),theWeight);
@@ -966,7 +966,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_ABS_ptLeadingJetDiLep->Fill(bjets.at(0).pt(),theWeight);
             DiLepMass = posEl.mt() + negMu.mt();
             h_ABS_mLepElMu->Fill(DiLep.M(),theWeight);
-            h_ABS_mLepDiLep->Fill(DiLepMass,theWeight);
+            h_ABS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_ABS_ptLepElMu->Fill(posEl.pt(),theWeight);
             h_ABS_ptLepDiLep->Fill(posEl.pt(),theWeight);
             h_ABS_ptLepElMu->Fill(negMu.pt(),theWeight);
@@ -991,7 +991,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_ABS_ptLeadingJetDiLep->Fill(bjets.at(0).pt(),theWeight);
             DiLepMass = posMu.mass() + negEl.mass();
             h_ABS_mLepElMu->Fill(DiLep.M(),theWeight);
-            h_ABS_mLepDiLep->Fill(DiLepMass,theWeight);
+            h_ABS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_ABS_ptLepElMu->Fill(posMu.pt(),theWeight);
             h_ABS_ptLepDiLep->Fill(posMu.pt(),theWeight);
             h_ABS_ptLepElMu->Fill(negEl.pt(),theWeight);
@@ -1945,30 +1945,30 @@ void MiniAnalyzer::beginJob() {
     f_outFile->cd();
     t_outTree =  new TTree("tree","tr");
 
-    t_outTree->Branch("TotalNumberOfEvents",&NEvent,"TotalNumberOfEvents/I");
-    t_outTree->Branch("NGoodvtx",&nGoodVtxs,"NGoodvtx/I");
-    t_outTree->Branch("RecoCos",&RecoCos);
-    if(!isData)
-    {
-        t_outTree->Branch("TruthCos",&TruthCos);
-        t_outTree->Branch("TruthMTT",&TruthMTT);
-        t_outTree->Branch("TruthCosMuMu",&TruthCosMuMu);
-        t_outTree->Branch("TruthMTTMuMu",&TruthMTTMuMu);
-    }
-    t_outTree->Branch("RecoMTT",&RecoMTT);
-    t_outTree->Branch("RecoCosMuMu",&RecoCosMuMu);
+//    t_outTree->Branch("TotalNumberOfEvents",&NEvent,"TotalNumberOfEvents/I");
+//    t_outTree->Branch("NGoodvtx",&nGoodVtxs,"NGoodvtx/I");
+//    t_outTree->Branch("RecoCos",&RecoCos);
+//    if(!isData)
+//    {
+//        t_outTree->Branch("TruthCos",&TruthCos);
+//        t_outTree->Branch("TruthMTT",&TruthMTT);
+//        t_outTree->Branch("TruthCosMuMu",&TruthCosMuMu);
+//        t_outTree->Branch("TruthMTTMuMu",&TruthMTTMuMu);
+//    }
+//    t_outTree->Branch("RecoMTT",&RecoMTT);
+//    t_outTree->Branch("RecoCosMuMu",&RecoCosMuMu);
 
-    t_outTree->Branch("RecoMTTMuMu",&RecoMTTMuMu);
-    t_outTree->Branch("EvantsAfterVert",&n_afterVertex,"EvantsAfterVert/I");
-    t_outTree->Branch("EvantsAfterHLT",&n_afterHLT,"EvantsAfterHLT/I");
-    t_outTree->Branch("EvantsAfterDiLep",&n_afterDiLepton,"EvantsAfterDiLep/I");
-    t_outTree->Branch("EvantsAfterDiMu",&n_afterDiMu,"EvantsAfterDiMu/I");
-    t_outTree->Branch("EvantsAfterDiEl",&n_afterDiEl,"EvantsAfterDiEl/I");
-    t_outTree->Branch("EvantsAfterElMu",&n_afterElMu,"EvantsAfterElMu/I");
-    t_outTree->Branch("EvantsAfter2Jets",&n_after2Jets,"EvantsAfter2Jets/I");
-    t_outTree->Branch("EvantsAfter2BJets",&n_after2BJets,"EvantsAfter2BJets/I");
-    t_outTree->Branch("EvantsAfterMet",&n_afterMet,"EvantsAfterMet/I");
-    t_outTree->Branch("EvantsAfterTop",&n_afterTop,"EvantsAfterTop/I");
+//    t_outTree->Branch("RecoMTTMuMu",&RecoMTTMuMu);
+//    t_outTree->Branch("EvantsAfterVert",&n_afterVertex,"EvantsAfterVert/I");
+//    t_outTree->Branch("EvantsAfterHLT",&n_afterHLT,"EvantsAfterHLT/I");
+//    t_outTree->Branch("EvantsAfterDiLep",&n_afterDiLepton,"EvantsAfterDiLep/I");
+//    t_outTree->Branch("EvantsAfterDiMu",&n_afterDiMu,"EvantsAfterDiMu/I");
+//    t_outTree->Branch("EvantsAfterDiEl",&n_afterDiEl,"EvantsAfterDiEl/I");
+//    t_outTree->Branch("EvantsAfterElMu",&n_afterElMu,"EvantsAfterElMu/I");
+//    t_outTree->Branch("EvantsAfter2Jets",&n_after2Jets,"EvantsAfter2Jets/I");
+//    t_outTree->Branch("EvantsAfter2BJets",&n_after2BJets,"EvantsAfter2BJets/I");
+//    t_outTree->Branch("EvantsAfterMet",&n_afterMet,"EvantsAfterMet/I");
+//    t_outTree->Branch("EvantsAfterTop",&n_afterTop,"EvantsAfterTop/I");
 
 
 
