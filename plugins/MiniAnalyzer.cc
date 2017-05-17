@@ -224,6 +224,18 @@ private:
     TH2F* h_truthRecoMTT;
     TH1F* h_truthMinusRecoCos;
     TH1F* h_truthMinusRecoMTT;
+    TH1F* h_Nevents;
+    TH1F* h_Nevents_AVS;
+    TH1F* h_Nevents_ALS;
+    TH1F* h_Nevents_AT;
+    TH1F* h_Nevents_AJS;
+    TH1F* h_Nevents_ABS;
+    TH1F* h_Nevents_AMS;
+    TH1F* h_Weight;
+    TH1F* h_Nevents_DiMu;
+    TH1F* h_Nevents_DiEl;
+    TH1F* h_Nevents_ElMu;
+    TH1F* h_Nevents_top;
 
     double coriso= 999; // initialise to dummy value
     double coriso2= 999; // initialise to dummy value
@@ -258,19 +270,19 @@ private:
 
     edm::EDGetTokenT<edm::TriggerResults> triggerResluts_;
 
-    int n_afterVertex = 0;
-    int n_afterHLT = 0;
-    int n_afterDiLepton = 0;
-    int n_afterDiMu = 0;
-    int n_afterDiEl = 0;
-    int n_afterElMu = 0;
-    int n_DiMuHLT = 0;
-    int n_DiElHLT = 0;
-    int n_ElMuHLT = 0;
-    int n_afterMet = 0;
-    int n_after2Jets = 0;
-    int n_after2BJets = 0;
-    int n_afterTop = 0;
+    //    int n_afterVertex = 0;
+    //    int n_afterHLT = 0;
+    //    int n_afterDiLepton = 0;
+    //    int n_afterDiMu = 0;
+    //    int n_afterDiEl = 0;
+    //    int n_afterElMu = 0;
+    //    int n_DiMuHLT = 0;
+    //    int n_DiElHLT = 0;
+    //    int n_ElMuHLT = 0;
+    //    int n_afterMet = 0;
+    //    int n_after2Jets = 0;
+    //    int n_after2BJets = 0;
+    //    int n_afterTop = 0;
     edm::View<pat::PackedGenParticle> genColl;
     edm::EDGetTokenT<LHERunInfoProduct> lheInfo_;
 
@@ -279,7 +291,9 @@ private:
     TLorentzVector DiLep;
     std::vector<double> *SlimmedMuon_Pt;
     bool b_Mu1=0,b_Mu2=0,b_ElEl1=0,b_ElEl2=0,b_MuEl1=0,b_MuEl2=0,b_ElMu1=0,b_ElMu2=0,b_ElMu3=0,b_ElMu4=0;
-
+    bool isPythia = false;
+    edm::EDGetTokenT<edm::TriggerResults> triggerFilters_;
+    bool Flag_globalTightHalo2016Filter=0,Flag_HBHENoiseFilter=0,Flag_HBHENoiseIsoFilter=0,Flag_BadPFMuonFilter=0,Flag_BadChargedCandidateFilter=0,Flag_EcalDeadCellTriggerPrimitiveFilter=0,Flag_eeBadScFilter=0;
 
 
 };
@@ -307,7 +321,9 @@ MiniAnalyzer::MiniAnalyzer(const edm::ParameterSet& iConfig):
     sfRes( (iConfig.getParameter<string>("sfRes")) ),
     outfileName((iConfig.getParameter<string>("outFileName"))),
     triggerResluts_(mayConsume<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerResults"))),
-    lheInfo_(mayConsume<LHERunInfoProduct,InRun>(iConfig.getParameter<edm::InputTag>("externalLHEProducer")))
+    lheInfo_(mayConsume<LHERunInfoProduct,InRun>(iConfig.getParameter<edm::InputTag>("externalLHEProducer"))),
+    isPythia((iConfig.getParameter<bool>("isPythia"))),
+    triggerFilters_(mayConsume<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerFilters")))
 
 {
     // initializing the solver
@@ -387,8 +403,26 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
     iEvent.getByToken(triggerResluts_,trigResults);
     const edm::TriggerNames& trigNames = iEvent.triggerNames(*trigResults);
-    
-
+    edm::Handle<edm::TriggerResults> triggerFilters;
+    iEvent.getByToken(triggerFilters_,triggerFilters);
+    const edm::TriggerNames& filterNames = iEvent.triggerNames(*triggerFilters);
+    for (unsigned int i = 0, n = triggerFilters->size(); i < n; ++i) {
+        std::string nameFilter;
+        nameFilter = filterNames.triggerName(i);
+        cout << nameFilter <<endl;
+        Flag_globalTightHalo2016Filter = triggerFilters->accept(filterNames.triggerIndex("Flag_globalTightHalo2016Filter"));
+        Flag_HBHENoiseFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_HBHENoiseFilter"));
+        Flag_HBHENoiseIsoFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_HBHENoiseIsoFilter"));
+        Flag_EcalDeadCellTriggerPrimitiveFilter =  triggerFilters->accept(filterNames.triggerIndex("Flag_EcalDeadCellTriggerPrimitiveFilter"));
+        Flag_BadPFMuonFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_BadPFMuonFilter"));
+        Flag_eeBadScFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_eeBadScFilter"));
+        Flag_BadChargedCandidateFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_BadChargedCandidateFilter"));
+        //        if(nameFilter.find("Flag") != std::string::npos) cout << nameFilter <<endl;
+    }
+    if(!(Flag_BadChargedCandidateFilter && Flag_BadPFMuonFilter && Flag_EcalDeadCellTriggerPrimitiveFilter && Flag_globalTightHalo2016Filter && Flag_HBHENoiseFilter && Flag_HBHENoiseIsoFilter)) return;
+    if(isData){
+        if(!Flag_eeBadScFilter) return;
+    }
     std::string Mu1,Mu2,ElEl1,ElEl2,ElMu1,ElMu2,ElMu3,ElMu4,MuEl1,MuEl2;
     if(isData){
         // Double Muon  36.811 fb^-1 Mu1 or Mu2
@@ -435,6 +469,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         std::string nameHLT,st;
         nameHLT = trigNames.triggerName(i);
         st = nameHLT.substr(0, nameHLT.size()-1);
+        if(nameHLT.find("Flag") != std::string::npos) cout << st <<endl;
         if(st.compare(Mu1) == 0)
         {
             b_Mu1 = trigResults->accept(i);
@@ -509,7 +544,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     /////////////////////////////////////////////////
     // make sure we have a good vertex //////////////
     /////////////////////////////////////////////////
-    ++NEvent;
+    //    ++NEvent;
+    h_Nevents->Fill(1);
     //    // cout << "number of Events " << NEvent << endl;
     if (vertices->empty()) return;
     VertexCollection::const_iterator PV = vertices->end();
@@ -522,7 +558,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         }
     }
     if (PV==vertices->end()) return;
-    ++n_afterVertex;
+    //    //++n_afterVertex;
+    h_Nevents_AVS->Fill(1);
     // count how many good vertices we have
     nGoodVtxs = 0;
     for (VertexCollection::const_iterator vtx = vertices->begin();vtx != vertices->end(); ++vtx) {
@@ -543,7 +580,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         theWeight *= lhEvtInfo->weights()[whichWeight].wgt/lhEvtInfo->originalXWGTUP();
 
     }
-
+    h_Weight->Fill(theWeight);
     h_NPV->Fill(nGoodVtxs,theWeight);
 
 
@@ -667,20 +704,23 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
     //After Lepton Selection
     if(isPosMu && isNegMu) isDiMuon = true;
-    if(isDiMuon)++n_afterDiMu;
+    if(isDiMuon) h_Nevents_DiMu->Fill(1);
+
     if(isPosEl && isNegEl) isDiElectron = true;
-    if(isDiElectron)++n_afterDiEl;
+    if(isDiElectron)h_Nevents_DiEl->Fill(1);
     if( isPosEl && isNegMu)  isElMu = true;
     if( isNegEl && isPosMu ) isMuEl = true;
-    if(isElMu || isMuEl) ++n_afterElMu;
+    if(isElMu || isMuEl) h_Nevents_ElMu->Fill(1);
     if(isDiMuon || isDiElectron || isElMu ) isDiLeptonic = true;
     if(!isDiLeptonic)return;
-    ++n_afterDiLepton;
+    //    //++n_afterDiLepton;
+    h_Nevents_ALS->Fill(1);
     if(isDiMuon && !(b_Mu1 || b_Mu2) ) return;
     if(isDiElectron && !(b_ElEl2)) return;
     if(isElMu && !(b_ElMu1 || b_ElMu2 || b_ElMu3 || b_ElMu4 || b_MuEl1 || b_MuEl2)) return;
     if(isMuEl && !(b_ElMu1 || b_ElMu2 || b_ElMu3 || b_ElMu4 || b_MuEl1 || b_MuEl2)) return;
-    ++n_afterHLT;
+    //    //++n_afterHLT;
+    h_Nevents_AT->Fill(1);
 
 
     if(isDiMuon)
@@ -773,7 +813,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     }
 
     if(njets.size() < 2) return;
-    ++n_after2Jets;
+    //    //++n_after2Jets;
+    h_Nevents_AJS->Fill(1);
     //After jet selection
     if(njets.size() > 0)
     {
@@ -843,7 +884,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     if(isDiMuon && met.pt() < 30) return;
     if(isDiElectron && met.pt() < 30) return;
     if((isElMu || isMuEl) && met.pt() <0) return;
-    ++n_afterMet;
+    //++n_afterMet;
+    h_Nevents_AMS->Fill(1);
     if(met.pt() > 0)
     {
         if(isDiMuon)
@@ -903,7 +945,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     }
 
     if(bjets.size() < 2) return;
-    ++n_after2BJets;
+    ////++n_after2BJets;
+    h_Nevents_ABS->Fill(1);
     if(bjets.size() > 0)
     {
         if(isDiMuon)
@@ -1246,12 +1289,12 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         BBJet.SetPtEtaPhiE(bjets.at(1).pt(),bjets.at(1).eta(),bjets.at(1).phi(),bjets.at(1).energy());
         //        cout << posMu.genParticle()->mother()->pdgId() << endl;
 
-                amwtSolver->SetConstraints(met.px(),met.py());
+        amwtSolver->SetConstraints(met.px(),met.py());
 
-                TtAMWTSolver::NeutrinoSolution nuSol =  amwtSolver->NuSolver(lepPos,lepNeg,BJet,BBJet);
+        TtAMWTSolver::NeutrinoSolution nuSol =  amwtSolver->NuSolver(lepPos,lepNeg,BJet,BBJet);
 
-//        amwtsolver->SetConstraints(met.px(),met.py());
-//        TtFullLepKinSolver::NeutrinoSolution nuSol= amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
+        //        amwtsolver->SetConstraints(met.px(),met.py());
+        //        TtFullLepKinSolver::NeutrinoSolution nuSol= amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
         // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
 
         dilepton = lepPos + lepNeg;
@@ -1289,7 +1332,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_mTTbarMuMu->Fill(ttbar.M(),theWeight);
             h_TTbarM->Fill(ttbar.M(),theWeight);
 
-            ++n_afterTop;
+            //++n_afterTop;
+            h_Nevents_top->Fill(1);
             RecoMTT.push_back(ttbar.M());
             RecoMTTMuMu.push_back(ttbar.M());
 
@@ -1444,7 +1488,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_ptTDiLep->Fill(t2.Pt(),theWeight);
             h_mTTbarElEl->Fill(ttbar.M(),theWeight);
             h_TTbarM->Fill(ttbar.M(),theWeight);
-            ++n_afterTop;
+            //++n_afterTop;
+            h_Nevents_top->Fill(1);
             RecoMTT.push_back(ttbar.M());
 
 
@@ -1593,7 +1638,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_mTTbarElMu->Fill(ttbar.M(),theWeight);
             h_TTbarM->Fill(ttbar.M(),theWeight);
 
-            ++n_afterTop;
+            //++n_afterTop;
+            h_Nevents_top->Fill(1);
             RecoMTT.push_back(ttbar.M());
 
 
@@ -1736,7 +1782,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_mTTbarElMu->Fill(ttbar.M(),theWeight);
             h_TTbarM->Fill(ttbar.M(),theWeight);
 
-            ++n_afterTop;
+            //++n_afterTop;
+            h_Nevents_top->Fill(1);
             RecoMTT.push_back(ttbar.M());
 
 
@@ -1833,14 +1880,14 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 void MiniAnalyzer::beginJob() {
     TH1::SetDefaultSumw2();
 
-    h_cosMuMu = fs->make<TH1F>("h_cosMuMu",";cos(#theta);",100,-1,1);
-    h_cosElEl = fs->make<TH1F>("h_cosElEl",";cos(#theta);",100,-1,1);
-    h_cosElMu = fs->make<TH1F>("h_cosElMu",";cos(#theta);",100,-1,1);
-    h_cosDiLep = fs->make<TH1F>("h_cosDiLep",";cos(#theta);",100,-1,1);
-    h_cosGenElMu = fs->make<TH1F>("h_cosGenElMu",";cos(#theta);",100,-1,1);
-    h_cosGenMuMu = fs->make<TH1F>("h_cosGenMuMu",";cos(#theta);",100,-1,1);
-    h_cosGenElEl = fs->make<TH1F>("h_cosGenElEl",";cos(#theta);",100,-1,1);
-    h_cosGen = fs->make<TH1F>("h_cosGen",";cos(#theta);",100,-1,1);
+    h_cosMuMu = fs->make<TH1F>("h_cosMuMu",";cos(#theta);",100,-1.5,1.5);
+    h_cosElEl = fs->make<TH1F>("h_cosElEl",";cos(#theta);",100,-1.5,1.5);
+    h_cosElMu = fs->make<TH1F>("h_cosElMu",";cos(#theta);",100,-1.5,1.5);
+    h_cosDiLep = fs->make<TH1F>("h_cosDiLep",";cos(#theta);",100,-1.5,1.5);
+    h_cosGenElMu = fs->make<TH1F>("h_cosGenElMu",";cos(#theta);",100,-1.5,1.5);
+    h_cosGenMuMu = fs->make<TH1F>("h_cosGenMuMu",";cos(#theta);",100,-1.5,1.5);
+    h_cosGenElEl = fs->make<TH1F>("h_cosGenElEl",";cos(#theta);",100,-1.5,1.5);
+    h_cosGen = fs->make<TH1F>("h_cosGen",";cos(#theta);",100,-1.5,1.5);
     h_GenTTbarM = fs->make<TH1F>("h_GenTTbarM",";M_{TTbar};",100,90,1300);
     h_etaMu = fs->make<TH1F>("h_EtaMu",";#eta_{l};",100,-3,3);
     h_TTbarM = fs->make<TH1F>("h_TTbarM",";M_{TTbar};",100,0,1300);
@@ -1936,11 +1983,24 @@ void MiniAnalyzer::beginJob() {
     h_AMS_METElMu = fs->make<TH1F>("h_AMS_METElMu",";MET;",100,0.,300.);
     h_AMS_METDiLep = fs->make<TH1F>("h_AMS_METDiLep",";MET;",100,0.,300.);
 
-    h_truthRecoMuMu = fs->make<TH2F>("h_truthRecoMuMu","",400,-1.,1.,400,-1.,1.);
-    h_truthRecoCos = fs->make<TH2F>("h_truthRecoCos","",400,-1.,1.,400,-1.,1.);
+    h_truthRecoMuMu = fs->make<TH2F>("h_truthRecoMuMu","",400,-1.5,1.5,400,-1.5,1.5);
+    h_truthRecoCos = fs->make<TH2F>("h_truthRecoCos","",400,-1.5,1.5,400,-1.5,1.5);
     h_truthRecoMTT = fs->make<TH2F>("h_truthRecoMTT","",400,0.,1000.,400,0.,1000.);
-    h_truthMinusRecoCos = fs->make<TH1F>("h_truthMinusRecoCos","",100,-2,2);
+    h_truthMinusRecoCos = fs->make<TH1F>("h_truthMinusRecoCos","",100,-3,3);
     h_truthMinusRecoMTT = fs->make<TH1F>("h_truthMinusRecoMTT","",100,-400,400);
+    h_Nevents = fs->make<TH1F>("h_Nevents","",10,-3,3);
+    h_Nevents_ABS = fs->make<TH1F>("h_Nevents_ABS","",10,-3,3);
+    h_Nevents_ALS = fs->make<TH1F>("h_Nevents_ALS","",10,-3,3);
+    h_Nevents_AMS = fs->make<TH1F>("h_Nevents_AMS","",10,-3,3);
+    h_Nevents_AJS = fs->make<TH1F>("h_Nevents_AJS","",10,-3,3);
+    h_Nevents_AVS = fs->make<TH1F>("h_Nevents_AVS","",10,-3,3);
+    h_Nevents_AT = fs->make<TH1F>("h_Nevents_AT","",10,-3,3);
+    h_Weight = fs->make<TH1F>("h_Weight","",400,-1000,1000);
+    h_Nevents_DiEl = fs->make<TH1F>("h_Nevents_DiEl","",10,-3,3);
+    h_Nevents_DiMu = fs->make<TH1F>("h_Nevents_DiMu","",10,-3,3);
+    h_Nevents_ElMu = fs->make<TH1F>("h_Nevents_ElMu","",10,-3,3);
+    h_Nevents_top = fs->make<TH1F>("h_Nevents_top","",10,-3,3);
+
 
 
 
@@ -1949,30 +2009,30 @@ void MiniAnalyzer::beginJob() {
     t_outTree =  new TTree("tree","tr");
     t_outTree->Branch("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v",&b_Mu1);
     t_outTree->Branch("SlimmedMuon_Pt",&SlimmedMuon_Pt);
-//    t_outTree->Branch("TotalNumberOfEvents",&NEvent,"TotalNumberOfEvents/I");
-//    t_outTree->Branch("NGoodvtx",&nGoodVtxs,"NGoodvtx/I");
-//    t_outTree->Branch("RecoCos",&RecoCos);
-//    if(!isData)
-//    {
-//        t_outTree->Branch("TruthCos",&TruthCos);
-//        t_outTree->Branch("TruthMTT",&TruthMTT);
-//        t_outTree->Branch("TruthCosMuMu",&TruthCosMuMu);
-//        t_outTree->Branch("TruthMTTMuMu",&TruthMTTMuMu);
-//    }
-//    t_outTree->Branch("RecoMTT",&RecoMTT);
-//    t_outTree->Branch("RecoCosMuMu",&RecoCosMuMu);
+    //    t_outTree->Branch("TotalNumberOfEvents",&NEvent,"TotalNumberOfEvents/I");
+    //    t_outTree->Branch("NGoodvtx",&nGoodVtxs,"NGoodvtx/I");
+    //    t_outTree->Branch("RecoCos",&RecoCos);
+    //    if(!isData)
+    //    {
+    //        t_outTree->Branch("TruthCos",&TruthCos);
+    //        t_outTree->Branch("TruthMTT",&TruthMTT);
+    //        t_outTree->Branch("TruthCosMuMu",&TruthCosMuMu);
+    //        t_outTree->Branch("TruthMTTMuMu",&TruthMTTMuMu);
+    //    }
+    //    t_outTree->Branch("RecoMTT",&RecoMTT);
+    //    t_outTree->Branch("RecoCosMuMu",&RecoCosMuMu);
 
-//    t_outTree->Branch("RecoMTTMuMu",&RecoMTTMuMu);
-//    t_outTree->Branch("EvantsAfterVert",&n_afterVertex,"EvantsAfterVert/I");
-//    t_outTree->Branch("EvantsAfterHLT",&n_afterHLT,"EvantsAfterHLT/I");
-//    t_outTree->Branch("EvantsAfterDiLep",&n_afterDiLepton,"EvantsAfterDiLep/I");
-//    t_outTree->Branch("EvantsAfterDiMu",&n_afterDiMu,"EvantsAfterDiMu/I");
-//    t_outTree->Branch("EvantsAfterDiEl",&n_afterDiEl,"EvantsAfterDiEl/I");
-//    t_outTree->Branch("EvantsAfterElMu",&n_afterElMu,"EvantsAfterElMu/I");
-//    t_outTree->Branch("EvantsAfter2Jets",&n_after2Jets,"EvantsAfter2Jets/I");
-//    t_outTree->Branch("EvantsAfter2BJets",&n_after2BJets,"EvantsAfter2BJets/I");
-//    t_outTree->Branch("EvantsAfterMet",&n_afterMet,"EvantsAfterMet/I");
-//    t_outTree->Branch("EvantsAfterTop",&n_afterTop,"EvantsAfterTop/I");
+    //    t_outTree->Branch("RecoMTTMuMu",&RecoMTTMuMu);
+    //    t_outTree->Branch("EvantsAfterVert",&n_afterVertex,"EvantsAfterVert/I");
+    //    t_outTree->Branch("EvantsAfterHLT",&n_afterHLT,"EvantsAfterHLT/I");
+    //    t_outTree->Branch("EvantsAfterDiLep",&n_afterDiLepton,"EvantsAfterDiLep/I");
+    //    t_outTree->Branch("EvantsAfterDiMu",&n_afterDiMu,"EvantsAfterDiMu/I");
+    //    t_outTree->Branch("EvantsAfterDiEl",&n_afterDiEl,"EvantsAfterDiEl/I");
+    //    t_outTree->Branch("EvantsAfterElMu",&n_afterElMu,"EvantsAfterElMu/I");
+    //    t_outTree->Branch("EvantsAfter2Jets",&n_after2Jets,"EvantsAfter2Jets/I");
+    //    t_outTree->Branch("EvantsAfter2BJets",&n_after2BJets,"EvantsAfter2BJets/I");
+    //    t_outTree->Branch("EvantsAfterMet",&n_afterMet,"EvantsAfterMet/I");
+    //    t_outTree->Branch("EvantsAfterTop",&n_afterTop,"EvantsAfterTop/I");
 
 
 
@@ -2009,20 +2069,20 @@ void MiniAnalyzer::beginRun(const Run & iRun, const EventSetup &){
 
 }
 void MiniAnalyzer::endRun(const Run & iRun, const EventSetup &){
-    if(!isData){
-    edm::Handle<LHERunInfoProduct> run;
-    typedef std::vector<LHERunInfoProduct::Header>::const_iterator headers_const_iterator;
-    iRun.getByToken(lheInfo_,run);
-//    iRun.getByLabel( "externalLHEProducer", run );
-    LHERunInfoProduct myLHERunInfoProduct = *(run.product());
+    if(!isData || !isPythia){
+        edm::Handle<LHERunInfoProduct> run;
+        typedef std::vector<LHERunInfoProduct::Header>::const_iterator headers_const_iterator;
+        iRun.getByToken(lheInfo_,run);
+        //    iRun.getByLabel( "externalLHEProducer", run );
+        LHERunInfoProduct myLHERunInfoProduct = *(run.product());
 
-    for (headers_const_iterator iter=myLHERunInfoProduct.headers_begin(); iter!=myLHERunInfoProduct.headers_end(); iter++){
-      std::cout << iter->tag() << std::endl;
-      std::vector<std::string> lines = iter->lines();
-      for (unsigned int iLine = 0; iLine<lines.size(); iLine++) {
-       std::cout << lines.at(iLine);
-      }
-    }
+        for (headers_const_iterator iter=myLHERunInfoProduct.headers_begin(); iter!=myLHERunInfoProduct.headers_end(); iter++){
+            std::cout << iter->tag() << std::endl;
+            std::vector<std::string> lines = iter->lines();
+            for (unsigned int iLine = 0; iLine<lines.size(); iLine++) {
+                std::cout << lines.at(iLine);
+            }
+        }
     }
 }
 
