@@ -81,7 +81,7 @@ private:
     virtual void endRun(edm::Run const& iRun, edm::EventSetup const&);
     virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
     virtual void endJob() override;
-
+    bool isMediumMuon(const reco::Muon & recoMu);
 
     // ----------member data ---------------------------
     edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
@@ -289,9 +289,8 @@ private:
     TLorentzVector PosLep;
     TLorentzVector NegLep;
     TLorentzVector DiLep;
-    std::vector<double> *SlimmedMuon_Pt;
     bool b_Mu1=0,b_Mu2=0,b_ElEl1=0,b_ElEl2=0,b_MuEl1=0,b_MuEl2=0,b_ElMu1=0,b_ElMu2=0,b_ElMu3=0,b_ElMu4=0;
-    bool isPythia = false;
+    bool isPythia;
     edm::EDGetTokenT<edm::TriggerResults> triggerFilters_;
     bool Flag_globalTightHalo2016Filter=0,Flag_HBHENoiseFilter=0,Flag_HBHENoiseIsoFilter=0,Flag_BadPFMuonFilter=0,Flag_BadChargedCandidateFilter=0,Flag_EcalDeadCellTriggerPrimitiveFilter=0,Flag_eeBadScFilter=0;
 
@@ -348,6 +347,7 @@ void
 MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
     using namespace edm;
+    h_Nevents->Fill(1);
 
 
     /////////////FILLINGINPUTS/////////////////////
@@ -409,20 +409,49 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     for (unsigned int i = 0, n = triggerFilters->size(); i < n; ++i) {
         std::string nameFilter;
         nameFilter = filterNames.triggerName(i);
-        cout << nameFilter <<endl;
-        Flag_globalTightHalo2016Filter = triggerFilters->accept(filterNames.triggerIndex("Flag_globalTightHalo2016Filter"));
-        Flag_HBHENoiseFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_HBHENoiseFilter"));
-        Flag_HBHENoiseIsoFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_HBHENoiseIsoFilter"));
-        Flag_EcalDeadCellTriggerPrimitiveFilter =  triggerFilters->accept(filterNames.triggerIndex("Flag_EcalDeadCellTriggerPrimitiveFilter"));
-        Flag_BadPFMuonFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_BadPFMuonFilter"));
-        Flag_eeBadScFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_eeBadScFilter"));
-        Flag_BadChargedCandidateFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_BadChargedCandidateFilter"));
+        if(nameFilter.compare("Flag_globalTightHalo2016Filter") == 0){
+            Flag_globalTightHalo2016Filter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_HBHENoiseFilter") == 0){
+            Flag_HBHENoiseFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_HBHENoiseIsoFilter") == 0){
+            Flag_HBHENoiseIsoFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_EcalDeadCellTriggerPrimitiveFilter") == 0){
+            Flag_EcalDeadCellTriggerPrimitiveFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_BadPFMuonFilter") == 0){
+            Flag_BadPFMuonFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_BadChargedCandidateFilter") == 0){
+            Flag_BadChargedCandidateFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_eeBadScFilter") == 0){
+            Flag_eeBadScFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+
         //        if(nameFilter.find("Flag") != std::string::npos) cout << nameFilter <<endl;
     }
-    if(!(Flag_BadChargedCandidateFilter && Flag_BadPFMuonFilter && Flag_EcalDeadCellTriggerPrimitiveFilter && Flag_globalTightHalo2016Filter && Flag_HBHENoiseFilter && Flag_HBHENoiseIsoFilter)) return;
-    if(isData){
-        if(!Flag_eeBadScFilter) return;
-    }
+    //    Flag_globalTightHalo2016Filter = triggerFilters->accept(filterNames.triggerIndex("Flag_globalTightHalo2016Filter"));
+    //    Flag_HBHENoiseFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_HBHENoiseFilter"));
+    //    Flag_HBHENoiseIsoFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_HBHENoiseIsoFilter"));
+    //    Flag_EcalDeadCellTriggerPrimitiveFilter =  triggerFilters->accept(filterNames.triggerIndex("Flag_EcalDeadCellTriggerPrimitiveFilter"));
+    //    Flag_BadPFMuonFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_BadPFMuonFilter"));
+    //    Flag_eeBadScFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_eeBadScFilter"));
+    //    Flag_BadChargedCandidateFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_BadChargedCandidateFilter"));
+    if(!( Flag_globalTightHalo2016Filter && Flag_HBHENoiseFilter && Flag_HBHENoiseIsoFilter && Flag_EcalDeadCellTriggerPrimitiveFilter )) return;
+
+
+    if(isData && !(Flag_eeBadScFilter) ) return; /*&& Flag_BadChargedCandidateFilter && Flag_BadPFMuonFilter*/
+
     std::string Mu1,Mu2,ElEl1,ElEl2,ElMu1,ElMu2,ElMu3,ElMu4,MuEl1,MuEl2;
     if(isData){
         // Double Muon  36.811 fb^-1 Mu1 or Mu2
@@ -469,7 +498,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         std::string nameHLT,st;
         nameHLT = trigNames.triggerName(i);
         st = nameHLT.substr(0, nameHLT.size()-1);
-        if(nameHLT.find("Flag") != std::string::npos) cout << st <<endl;
+
         if(st.compare(Mu1) == 0)
         {
             b_Mu1 = trigResults->accept(i);
@@ -521,7 +550,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         //                  <<": " << (trigResults->accept(i) ? "PASS" : "fail (or not run)")
         //                 << std::endl;
     }
-
+cout << "0 here" << endl;
     if(!isData){
         b_Mu1=trigResults->accept(trigNames.triggerIndex(Mu1));
 
@@ -538,14 +567,13 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         b_ElMu3=trigResults->accept(trigNames.triggerIndex(ElMu3));
         b_ElMu4=trigResults->accept(trigNames.triggerIndex(ElMu4));
     }
-
+cout << "1 here" << endl;
     //    cout << b_Mu1 << "      "<< b_Mu2 << endl;
     
     /////////////////////////////////////////////////
     // make sure we have a good vertex //////////////
     /////////////////////////////////////////////////
     //    ++NEvent;
-    h_Nevents->Fill(1);
     //    // cout << "number of Events " << NEvent << endl;
     if (vertices->empty()) return;
     VertexCollection::const_iterator PV = vertices->end();
@@ -559,12 +587,15 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     }
     if (PV==vertices->end()) return;
     //    //++n_afterVertex;
+    cout << "2 here" << endl;
     h_Nevents_AVS->Fill(1);
     // count how many good vertices we have
     nGoodVtxs = 0;
     for (VertexCollection::const_iterator vtx = vertices->begin();vtx != vertices->end(); ++vtx) {
         if ( !(vtx->isFake()) && vtx->ndof() >= 4. && vtx->position().Rho() <= 2.0 && fabs(vtx->position().Z()) <= 24.) nGoodVtxs++;
     }
+    cout << "3 here" << endl;
+
     //////////////EVENT WEIGHT/////////
     /// finding weight so we can
     /// compare different backgrounds
@@ -582,6 +613,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     }
     h_Weight->Fill(theWeight);
     h_NPV->Fill(nGoodVtxs,theWeight);
+    cout << "4 here" << endl;
 
 
     //////////////MUON////////////////
@@ -592,13 +624,13 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 
     for (pat::MuonCollection::const_iterator mup = muons->begin();mup != muons->end(); ++mup){
-        SlimmedMuon_Pt->push_back(mup->pt());
 
         if( !(mup->charge() > 0)) continue;
         if( !(mup->pt() > 20.0 )) continue;
         if( !(fabs(mup->eta()) < 2.4 )) continue;
-        if( !(mup->isPFMuon())) continue;
-        if( !(mup->isGlobalMuon() || mup->isTrackerMuon())) continue;
+        //        if( !(mup->isPFMuon())) continue;
+        //        if( !(mup->isGlobalMuon() || mup->isTrackerMuon())) continue;
+        if(!isMediumMuon(*mup)) continue;
         if( mup->isIsolationValid()){
             reco::MuonPFIsolation pfR04 = mup->pfIsolationR04();
             coriso = pfR04.sumChargedHadronPt + std::max(0., pfR04.sumNeutralHadronEt+pfR04.sumPhotonEt-0.5*pfR04.sumPUPt);
@@ -619,13 +651,15 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         if( !(mum->charge() < 0)) continue;
         if( !(mum->pt() > 20.0 )) continue;
         if( !(fabs(mum->eta()) < 2.4 )) continue;
-        if( !(mum->isPFMuon())) continue;
-        if( !(mum->isGlobalMuon() || mum->isTrackerMuon())) continue;
+        //        if( !(mum->isPFMuon())) continue;
+        //        if( !(mum->isGlobalMuon() || mum->isTrackerMuon())) continue;
+        if(!isMediumMuon(*mum)) continue;
+
         if( mum->isIsolationValid()){
             reco::MuonPFIsolation pfR04 = mum->pfIsolationR04();
             coriso2 = pfR04.sumChargedHadronPt + std::max(0., pfR04.sumNeutralHadronEt+pfR04.sumPhotonEt-0.5*pfR04.sumPUPt);
         }
-        if (!(coriso2/mum->pt() <  0.12)) continue;
+        if (!(coriso2/mum->pt() <  0.15)) continue;
         if(mum->pt() > negMu.pt() ) negMu = *mum;
         h_PtMu->Fill(mum->pt(),theWeight);
         h_ALS_etaLMuMu->Fill(negMu.eta(),theWeight);
@@ -2007,8 +2041,8 @@ void MiniAnalyzer::beginJob() {
     //initialize the tree
     f_outFile->cd();
     t_outTree =  new TTree("tree","tr");
-    t_outTree->Branch("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v",&b_Mu1);
-    t_outTree->Branch("SlimmedMuon_Pt",&SlimmedMuon_Pt);
+//    t_outTree->Branch("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v",&b_Mu1);
+//    t_outTree->Branch("SlimmedMuon_Pt",&SlimmedMuon_Pt);
     //    t_outTree->Branch("TotalNumberOfEvents",&NEvent,"TotalNumberOfEvents/I");
     //    t_outTree->Branch("NGoodvtx",&nGoodVtxs,"NGoodvtx/I");
     //    t_outTree->Branch("RecoCos",&RecoCos);
@@ -2047,13 +2081,16 @@ void MiniAnalyzer::endJob() {
 
 
 //____________________________________________________________________________
-bool MiniAnalyzer::IsSoftMuon(const pat::Muon& mu , const reco::Vertex& vertex) {
-    if (!(muon::isGoodMuon(mu, muon::TMOneStationTight))) return false;
-    if (!(mu.innerTrack()->hitPattern().trackerLayersWithMeasurement() > 5)) return false;
-    if (!(mu.innerTrack()->hitPattern().pixelLayersWithMeasurement() > 0)) return false;
-    if (!(mu.innerTrack()->quality(reco::TrackBase::highPurity))) return false;
-    if (!((fabs(mu.innerTrack()->dxy(vertex.position())) < 0.3) && (fabs(mu.innerTrack()->dz(vertex.position())) < 20.))) return false;
-    return true;
+bool MiniAnalyzer::isMediumMuon(const reco::Muon & recoMu)
+{
+    bool goodGlob = recoMu.isGlobalMuon() &&
+            recoMu.globalTrack()->normalizedChi2() < 3 &&
+            recoMu.combinedQuality().chi2LocalPosition < 12 &&
+            recoMu.combinedQuality().trkKink < 20;
+    bool isMedium = muon::isLooseMuon(recoMu) &&
+            recoMu.innerTrack()->validFraction() > 0.49 &&
+            muon::segmentCompatibility(recoMu) > (goodGlob ? 0.303 : 0.451);
+    return isMedium;
 }
 
 
@@ -2069,7 +2106,9 @@ void MiniAnalyzer::beginRun(const Run & iRun, const EventSetup &){
 
 }
 void MiniAnalyzer::endRun(const Run & iRun, const EventSetup &){
-    if(!isData || !isPythia){
+    if(!isData)return;
+    if(!isPythia) return;
+
         edm::Handle<LHERunInfoProduct> run;
         typedef std::vector<LHERunInfoProduct::Header>::const_iterator headers_const_iterator;
         iRun.getByToken(lheInfo_,run);
@@ -2083,7 +2122,7 @@ void MiniAnalyzer::endRun(const Run & iRun, const EventSetup &){
                 std::cout << lines.at(iLine);
             }
         }
-    }
+
 }
 
 //define this as a plug-in
