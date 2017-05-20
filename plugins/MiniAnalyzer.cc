@@ -608,7 +608,7 @@ cout << "1 here" << endl;
     {
         theWeight = genEvtInfo->weight();
         int whichWeight = 1;
-        theWeight *= lhEvtInfo->weights()[whichWeight].wgt/lhEvtInfo->originalXWGTUP();
+       if(!isPythia) theWeight *= lhEvtInfo->weights()[whichWeight].wgt/lhEvtInfo->originalXWGTUP();
 
     }
     h_Weight->Fill(theWeight);
@@ -1903,6 +1903,7 @@ cout << "1 here" << endl;
 
 
 
+    cout << "isPythia: "<<isPythia << endl;
 
 
 
@@ -2106,8 +2107,11 @@ void MiniAnalyzer::beginRun(const Run & iRun, const EventSetup &){
 
 }
 void MiniAnalyzer::endRun(const Run & iRun, const EventSetup &){
-    if(!isData)return;
-    if(!isPythia) return;
+    cout << "Im in End Run" <<endl;
+    if(isData)return;
+    if(isPythia) return;
+    cout << "isPythia: "<<isPythia << endl;
+    cout << "Why here" <<endl;
 
         edm::Handle<LHERunInfoProduct> run;
         typedef std::vector<LHERunInfoProduct::Header>::const_iterator headers_const_iterator;
