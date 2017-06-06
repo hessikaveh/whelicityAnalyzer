@@ -25,7 +25,10 @@ Whelicity = cms.EDAnalyzer("MiniAnalyzer",
 	triggerResults = cms.InputTag("TriggerResults","","HLT"),
 	externalLHEProducer = cms.InputTag("externalLHEProducer"),
 	isPythia = cms.bool(False),
-	triggerFilters = cms.InputTag("TriggerResults","","PAT")
+	triggerFilters = cms.InputTag("TriggerResults","","PAT"),
+        DiMu = cms.bool(False),
+        DiEl = cms.bool(False),
+        ElMu = cms.bool(False)
 	
 )
 

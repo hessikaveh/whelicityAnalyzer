@@ -236,10 +236,42 @@ private:
     TH1F* h_Nevents_DiEl;
     TH1F* h_Nevents_ElMu;
     TH1F* h_Nevents_top;
+    TH1F* h_NinMuMu_ALS;
+    TH1F* h_NoutMuMu_ALS;
+    TH1F* h_NinElMu_ALS;
+    TH1F* h_NoutElMu_ALS;
+    TH1F* h_NinElEl_ALS;
+    TH1F* h_NoutElEl_ALS;
+    TH1F* h_NinMuMu_AJS;
+    TH1F* h_NoutMuMu_AJS;
+    TH1F* h_NinElMu_AJS;
+    TH1F* h_NoutElMu_AJS;
+    TH1F* h_NinElEl_AJS;
+    TH1F* h_NoutElEl_AJS;
+    TH1F* h_NinMuMu_AMS;
+    TH1F* h_NoutMuMu_AMS;
+    TH1F* h_NinElMu_AMS;
+    TH1F* h_NoutElMu_AMS;
+    TH1F* h_NinElEl_AMS;
+    TH1F* h_NoutElEl_AMS;
+    TH1F* h_NinMuMu_ABS;
+    TH1F* h_NoutMuMu_ABS;
+    TH1F* h_NinElMu_ABS;
+    TH1F* h_NoutElMu_ABS;
+    TH1F* h_NinElEl_ABS;
+    TH1F* h_NoutElEl_ABS;
+    TH1F* h_NinNoMET_ABS;
+    TH1F* h_NoutNoMET_ABS;
+    TH1F* h_NinMuMu_NoMET_ABS;
+    TH1F* h_NoutMuMu_NoMET_ABS;
+    TH1F* h_NinElMu_NoMET_ABS;
+    TH1F* h_NoutElMu_NoMET_ABS;
+    TH1F* h_NinElEl_NoMET_ABS;
+    TH1F* h_NoutElEl_NoMET_ABS;
 
     double coriso= 999; // initialise to dummy value
     double coriso2= 999; // initialise to dummy value
-    double DiLepMass;
+
 
 
 
@@ -293,7 +325,9 @@ private:
     bool isPythia;
     edm::EDGetTokenT<edm::TriggerResults> triggerFilters_;
     bool Flag_globalTightHalo2016Filter=0,Flag_HBHENoiseFilter=0,Flag_HBHENoiseIsoFilter=0,Flag_BadPFMuonFilter=0,Flag_BadChargedCandidateFilter=0,Flag_EcalDeadCellTriggerPrimitiveFilter=0,Flag_eeBadScFilter=0;
-
+    bool DiMu;
+    bool DiEl;
+    bool ElMu;
 
 };
 
@@ -322,7 +356,10 @@ MiniAnalyzer::MiniAnalyzer(const edm::ParameterSet& iConfig):
     triggerResluts_(mayConsume<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerResults"))),
     lheInfo_(mayConsume<LHERunInfoProduct,InRun>(iConfig.getParameter<edm::InputTag>("externalLHEProducer"))),
     isPythia((iConfig.getParameter<bool>("isPythia"))),
-    triggerFilters_(mayConsume<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerFilters")))
+    triggerFilters_(mayConsume<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerFilters"))),
+    DiMu((iConfig.getParameter<bool>("DiMu"))),
+    DiEl((iConfig.getParameter<bool>("DiEl"))),
+    ElMu((iConfig.getParameter<bool>("ElMu")))
 
 {
     // initializing the solver
@@ -347,6 +384,7 @@ void
 MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
     using namespace edm;
+    ////////////0a total number of events /////////////////
     h_Nevents->Fill(1);
 
 
@@ -397,62 +435,13 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     isMuEl = false;
     isDiLeptonic = false;
 
-    /////////////////////HLT
-    ///
+    /////////////////////0b HLT trigger/////////////////////
     edm::Handle<edm::TriggerResults> trigResults; //our trigger result object
 
     iEvent.getByToken(triggerResluts_,trigResults);
     const edm::TriggerNames& trigNames = iEvent.triggerNames(*trigResults);
-    edm::Handle<edm::TriggerResults> triggerFilters;
-    iEvent.getByToken(triggerFilters_,triggerFilters);
-    const edm::TriggerNames& filterNames = iEvent.triggerNames(*triggerFilters);
-    for (unsigned int i = 0, n = triggerFilters->size(); i < n; ++i) {
-        std::string nameFilter;
-        nameFilter = filterNames.triggerName(i);
-        if(nameFilter.compare("Flag_globalTightHalo2016Filter") == 0){
-            Flag_globalTightHalo2016Filter = triggerFilters->accept(i);
-            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_HBHENoiseFilter") == 0){
-            Flag_HBHENoiseFilter = triggerFilters->accept(i);
-            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_HBHENoiseIsoFilter") == 0){
-            Flag_HBHENoiseIsoFilter = triggerFilters->accept(i);
-            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_EcalDeadCellTriggerPrimitiveFilter") == 0){
-            Flag_EcalDeadCellTriggerPrimitiveFilter = triggerFilters->accept(i);
-            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_BadPFMuonFilter") == 0){
-            Flag_BadPFMuonFilter = triggerFilters->accept(i);
-            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_BadChargedCandidateFilter") == 0){
-            Flag_BadChargedCandidateFilter = triggerFilters->accept(i);
-            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_eeBadScFilter") == 0){
-            Flag_eeBadScFilter = triggerFilters->accept(i);
-            cout << nameFilter <<endl;
-        }
-
-        //        if(nameFilter.find("Flag") != std::string::npos) cout << nameFilter <<endl;
-    }
-    //    Flag_globalTightHalo2016Filter = triggerFilters->accept(filterNames.triggerIndex("Flag_globalTightHalo2016Filter"));
-    //    Flag_HBHENoiseFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_HBHENoiseFilter"));
-    //    Flag_HBHENoiseIsoFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_HBHENoiseIsoFilter"));
-    //    Flag_EcalDeadCellTriggerPrimitiveFilter =  triggerFilters->accept(filterNames.triggerIndex("Flag_EcalDeadCellTriggerPrimitiveFilter"));
-    //    Flag_BadPFMuonFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_BadPFMuonFilter"));
-    //    Flag_eeBadScFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_eeBadScFilter"));
-    //    Flag_BadChargedCandidateFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_BadChargedCandidateFilter"));
-    if(!( Flag_globalTightHalo2016Filter && Flag_HBHENoiseFilter && Flag_HBHENoiseIsoFilter && Flag_EcalDeadCellTriggerPrimitiveFilter )) return;
-
-
-    if(isData && !(Flag_eeBadScFilter) ) return; /*&& Flag_BadChargedCandidateFilter && Flag_BadPFMuonFilter*/
-
     std::string Mu1,Mu2,ElEl1,ElEl2,ElMu1,ElMu2,ElMu3,ElMu4,MuEl1,MuEl2;
+
     if(isData){
         // Double Muon  36.811 fb^-1 Mu1 or Mu2
         Mu1="HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v";
@@ -494,6 +483,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 
     }
+
     for (unsigned int i = 0, n = trigResults->size(); i < n; ++i) {
         std::string nameHLT,st;
         nameHLT = trigNames.triggerName(i);
@@ -544,13 +534,13 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             b_ElMu4 = trigResults->accept(i);
             cout << st << endl;
         }
-
+        //////////////PRINT ALL TRIGGER PASSES /////////////////////
         //        std::cout << "Trigger " << trigNames.triggerName(i) << "i: "<<i
 
         //                  <<": " << (trigResults->accept(i) ? "PASS" : "fail (or not run)")
         //                 << std::endl;
     }
-cout << "0 here" << endl;
+
     if(!isData){
         b_Mu1=trigResults->accept(trigNames.triggerIndex(Mu1));
 
@@ -567,14 +557,16 @@ cout << "0 here" << endl;
         b_ElMu3=trigResults->accept(trigNames.triggerIndex(ElMu3));
         b_ElMu4=trigResults->accept(trigNames.triggerIndex(ElMu4));
     }
-cout << "1 here" << endl;
-    //    cout << b_Mu1 << "      "<< b_Mu2 << endl;
-    
-    /////////////////////////////////////////////////
-    // make sure we have a good vertex //////////////
-    /////////////////////////////////////////////////
-    //    ++NEvent;
-    //    // cout << "number of Events " << NEvent << endl;
+    if(DiMu && !(b_Mu1 || b_Mu2) ) return;
+    if(DiEl && !(b_ElEl2)) return;
+    if(ElMu && !(b_ElMu1 || b_ElMu2 || b_ElMu3 || b_ElMu4 || b_MuEl1 || b_MuEl2)) return;
+
+    ///Number of events after trigger
+    h_Nevents_AT->Fill(1);
+
+    /////////////////////0c Event Filters //////////////////
+
+    ///Vertex Filter
     if (vertices->empty()) return;
     VertexCollection::const_iterator PV = vertices->end();
     for (VertexCollection::const_iterator vtx = vertices->begin(); vtx != vertices->end(); ++vtx, ++PV) {
@@ -586,15 +578,69 @@ cout << "1 here" << endl;
         }
     }
     if (PV==vertices->end()) return;
-    //    //++n_afterVertex;
-    cout << "2 here" << endl;
+
+    ///Number of events after vertex filter
     h_Nevents_AVS->Fill(1);
     // count how many good vertices we have
     nGoodVtxs = 0;
     for (VertexCollection::const_iterator vtx = vertices->begin();vtx != vertices->end(); ++vtx) {
         if ( !(vtx->isFake()) && vtx->ndof() >= 4. && vtx->position().Rho() <= 2.0 && fabs(vtx->position().Z()) <= 24.) nGoodVtxs++;
     }
-    cout << "3 here" << endl;
+
+    ///Noise filters
+    edm::Handle<edm::TriggerResults> triggerFilters; // Flag and filters
+    iEvent.getByToken(triggerFilters_,triggerFilters);
+    const edm::TriggerNames& filterNames = iEvent.triggerNames(*triggerFilters);
+    for (unsigned int i = 0, n = triggerFilters->size(); i < n; ++i) {
+        std::string nameFilter;
+        nameFilter = filterNames.triggerName(i);
+        if(nameFilter.compare("Flag_globalTightHalo2016Filter") == 0){
+            Flag_globalTightHalo2016Filter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_HBHENoiseFilter") == 0){
+            Flag_HBHENoiseFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_HBHENoiseIsoFilter") == 0){
+            Flag_HBHENoiseIsoFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_EcalDeadCellTriggerPrimitiveFilter") == 0){
+            Flag_EcalDeadCellTriggerPrimitiveFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_BadPFMuonFilter") == 0){
+            Flag_BadPFMuonFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_BadChargedCandidateFilter") == 0){
+            Flag_BadChargedCandidateFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_eeBadScFilter") == 0){
+            Flag_eeBadScFilter = triggerFilters->accept(i);
+            cout << nameFilter <<endl;
+        }
+
+        //        if(nameFilter.find("Flag") != std::string::npos) cout << nameFilter <<endl;
+    }
+    //    Flag_globalTightHalo2016Filter = triggerFilters->accept(filterNames.triggerIndex("Flag_globalTightHalo2016Filter"));
+    //    Flag_HBHENoiseFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_HBHENoiseFilter"));
+    //    Flag_HBHENoiseIsoFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_HBHENoiseIsoFilter"));
+    //    Flag_EcalDeadCellTriggerPrimitiveFilter =  triggerFilters->accept(filterNames.triggerIndex("Flag_EcalDeadCellTriggerPrimitiveFilter"));
+    //    Flag_BadPFMuonFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_BadPFMuonFilter"));
+    //    Flag_eeBadScFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_eeBadScFilter"));
+    //    Flag_BadChargedCandidateFilter = triggerFilters->accept(filterNames.triggerIndex("Flag_BadChargedCandidateFilter"));
+
+    if(!( Flag_globalTightHalo2016Filter && Flag_HBHENoiseFilter && Flag_HBHENoiseIsoFilter && Flag_EcalDeadCellTriggerPrimitiveFilter )) return;
+
+
+    if(isData && !(Flag_eeBadScFilter) ) return; /*&& Flag_BadChargedCandidateFilter && Flag_BadPFMuonFilter*/
+
+
+
+
 
     //////////////EVENT WEIGHT/////////
     /// finding weight so we can
@@ -608,20 +654,20 @@ cout << "1 here" << endl;
     {
         theWeight = genEvtInfo->weight();
         int whichWeight = 1;
-       if(!isPythia) theWeight *= lhEvtInfo->weights()[whichWeight].wgt/lhEvtInfo->originalXWGTUP();
+        if(!isPythia) theWeight *= lhEvtInfo->weights()[whichWeight].wgt/lhEvtInfo->originalXWGTUP();
 
     }
     h_Weight->Fill(theWeight);
     h_NPV->Fill(nGoodVtxs,theWeight);
-    cout << "4 here" << endl;
 
+    ///////////////1 Dilepton pair choice //////
 
     //////////////MUON////////////////
     /// finding pos and neg muon with highest pt
-    ///
+    /// tight muon
+
     pat::Muon posMu;
     pat::Muon negMu;
-
 
     for (pat::MuonCollection::const_iterator mup = muons->begin();mup != muons->end(); ++mup){
 
@@ -630,7 +676,8 @@ cout << "1 here" << endl;
         if( !(fabs(mup->eta()) < 2.4 )) continue;
         //        if( !(mup->isPFMuon())) continue;
         //        if( !(mup->isGlobalMuon() || mup->isTrackerMuon())) continue;
-        if(!isMediumMuon(*mup)) continue;
+        //        if(!isMediumMuon(*mup)) continue;
+        if(!(mup->isTightMuon(*PV))) continue;
         if( mup->isIsolationValid()){
             reco::MuonPFIsolation pfR04 = mup->pfIsolationR04();
             coriso = pfR04.sumChargedHadronPt + std::max(0., pfR04.sumNeutralHadronEt+pfR04.sumPhotonEt-0.5*pfR04.sumPUPt);
@@ -653,7 +700,8 @@ cout << "1 here" << endl;
         if( !(fabs(mum->eta()) < 2.4 )) continue;
         //        if( !(mum->isPFMuon())) continue;
         //        if( !(mum->isGlobalMuon() || mum->isTrackerMuon())) continue;
-        if(!isMediumMuon(*mum)) continue;
+        //        if(!isMediumMuon(*mum)) continue;
+        if(!(mum->isTightMuon(*PV))) continue;
 
         if( mum->isIsolationValid()){
             reco::MuonPFIsolation pfR04 = mum->pfIsolationR04();
@@ -674,26 +722,63 @@ cout << "1 here" << endl;
     //    // cout << posMu.charge() << " charges " << negMu.charge() << endl;
     ////////////////////ELECTRONS//////////////////////////
     /// electron identification
-    ///
+    /////tight electrons
+
     pat::Electron posEl;
     pat::Electron negEl;
 
     for (pat::ElectronCollection::const_iterator elp = electrons->begin();elp != electrons->end();++elp){
+        //        if(elp->isElectronIDAvailable("egmGsfElectronIDs:cutBasedElectronID-Summer16-80X-V1-tight")) cout << "id available!!!!!!!!!!!!!!!!"<<endl;
+
         if( !( elp->charge() > 0 ) ) continue;
         if( !( elp->pt() > 20 ) ) continue;
         if( !( fabs(elp->eta() ) < 2.5)) continue;
-        if( !( elp->gsfTrack()->dz() < 0.04 )) continue;
-        if( !(elp->passConversionVeto())) continue;
-        if( !(elp->gsfTrack()->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS) <= 0)) continue;
-        GsfElectron::PflowIsolationVariables pfIso = elp->pfIsolationVariables();
-        static double relCombIsoEA = 999.;
-        float abseta = fabs(elp->superCluster()->eta());
-        float eA = effectiveAreas_.getEffectiveArea(abseta);
-        relCombIsoEA = (( pfIso.sumChargedHadronPt
-                          + std::max( 0.0f, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eA*rho) )
-                        / elp->pt() );
-        if( !(relCombIsoEA < 0.15)) continue;
-        if( !(elp->userFloat("ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Values") > 0.5 )) continue;
+        //barrel
+        if(fabs(elp->superCluster()->eta()) <= 1.479){
+            //impact parameters
+            if( !( elp->gsfTrack()->d0() < 0.05 )) continue;
+            if(!( elp->gsfTrack()->dz() < 0.10)) continue;
+            //tuned selection
+            if(!(elp->full5x5_sigmaIetaIeta() <  0.00998)) continue;
+            if(!(fabs(elp->deltaEtaSeedClusterTrackAtVtx()) < 0.00308)) continue;
+            if(!(fabs(elp->deltaPhiSuperClusterTrackAtVtx()) <  0.0816 )) continue;
+            if(!(elp->hadronicOverEm() < 0.0414 )) continue;
+            GsfElectron::PflowIsolationVariables pfIso = elp->pfIsolationVariables();
+            static double relCombIsoEA = 999.;
+            float abseta = fabs(elp->superCluster()->eta());
+            float eA = effectiveAreas_.getEffectiveArea(abseta);
+            relCombIsoEA = (( pfIso.sumChargedHadronPt
+                              + std::max( 0.0f, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eA*rho) )
+                            / elp->pt() );
+            if( !(relCombIsoEA <  0.0588 )) continue;
+            if(!(fabs(1.0 - elp->eSuperClusterOverP())*(1.0/elp->ecalEnergy()) <  0.0129 )) continue;
+            if( !(elp->gsfTrack()->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS) <= 1)) continue;
+            if( !(elp->passConversionVeto())) continue;
+        }
+        else //endcap
+        {
+            //impact parameters
+            if( !( elp->gsfTrack()->d0() < 0.1 )) continue;
+            if(!( elp->gsfTrack()->dz() < 0.20)) continue;
+            //tuned selection
+            if(!(elp->full5x5_sigmaIetaIeta() <   0.0292 )) continue;
+            if(!(fabs(elp->deltaEtaSeedClusterTrackAtVtx()) <  0.00605 )) continue;
+            if(!(fabs(elp->deltaPhiSuperClusterTrackAtVtx()) <  0.0394 )) continue;
+            if(!(elp->hadronicOverEm() < 0.0641 )) continue;
+            GsfElectron::PflowIsolationVariables pfIso = elp->pfIsolationVariables();
+            static double relCombIsoEA = 999.;
+            float abseta = fabs(elp->superCluster()->eta());
+            float eA = effectiveAreas_.getEffectiveArea(abseta);
+            relCombIsoEA = (( pfIso.sumChargedHadronPt
+                              + std::max( 0.0f, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eA*rho) )
+                            / elp->pt() );
+            if( !(relCombIsoEA <  0.0571 )) continue;
+            if(!(fabs(1.0 - elp->eSuperClusterOverP())*(1.0/elp->ecalEnergy()) <  0.0129 )) continue;
+            if( !(elp->gsfTrack()->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS) <= 1)) continue;
+            if( !(elp->passConversionVeto())) continue;
+        }
+
+        //        if( !(elp->userFloat("ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Values") > 0.5 )) continue;
         //        // cout << elp->userFloat("ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Values") << "MVA Id "<< endl;
         double dR =0;
         for(pat::MuonCollection::const_iterator dumMu = muons->begin();dumMu != muons->end();++dumMu){
@@ -711,19 +796,50 @@ cout << "1 here" << endl;
         if( !( elm->charge() < 0 ) ) continue;
         if( !( elm->pt() > 20 ) ) continue;
         if( !( fabs(elm->eta() ) < 2.5)) continue;
-        if( !( elm->gsfTrack()->dz() < 0.04 )) continue;
-        if( !(elm->passConversionVeto())) continue;
-        if( !(elm->gsfTrack()->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS) <= 0)) continue;
-        GsfElectron::PflowIsolationVariables pfIso = elm->pfIsolationVariables();
-        static double relCombIsoEA = 999.;
-        float abseta = fabs(elm->superCluster()->eta());
-        float eA = effectiveAreas_.getEffectiveArea(abseta);
-        relCombIsoEA = (( pfIso.sumChargedHadronPt
-                          + std::max( 0.0f, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eA*rho) )
-                        / elm->pt() );
-        if( !(relCombIsoEA < 0.15)) continue;
-        if( !(elm->userFloat("ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Values") > 0.5 )) continue;
-        // cout << elm->userFloat("ElectronMVAEstimatorRun2Spring15NonTrig25nsV1Values") << "MVA Id "<< endl;
+        //barrel
+        if(fabs(elm->superCluster()->eta()) <= 1.479){
+            //impact parameters
+            if( !( elm->gsfTrack()->d0() < 0.05 )) continue;
+            if(!( elm->gsfTrack()->dz() < 0.10)) continue;
+            //tuned selection
+            if(!(elm->full5x5_sigmaIetaIeta() <  0.00998)) continue;
+            if(!(fabs(elm->deltaEtaSeedClusterTrackAtVtx()) < 0.00308)) continue;
+            if(!(fabs(elm->deltaPhiSuperClusterTrackAtVtx()) <  0.0816 )) continue;
+            if(!(elm->hadronicOverEm() < 0.0414 )) continue;
+            GsfElectron::PflowIsolationVariables pfIso = elm->pfIsolationVariables();
+            static double relCombIsoEA = 999.;
+            float abseta = fabs(elm->superCluster()->eta());
+            float eA = effectiveAreas_.getEffectiveArea(abseta);
+            relCombIsoEA = (( pfIso.sumChargedHadronPt
+                              + std::max( 0.0f, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eA*rho) )
+                            / elm->pt() );
+            if( !(relCombIsoEA <  0.0588 )) continue;
+            if(!(fabs(1.0 - elm->eSuperClusterOverP())*(1.0/elm->ecalEnergy()) <  0.0129 )) continue;
+            if( !(elm->gsfTrack()->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS) <= 1)) continue;
+            if( !(elm->passConversionVeto())) continue;
+        }
+        else //endcap
+        {
+            //impact parameters
+            if( !( elm->gsfTrack()->d0() < 0.1 )) continue;
+            if(!( elm->gsfTrack()->dz() < 0.20)) continue;
+            //tuned selection
+            if(!(elm->full5x5_sigmaIetaIeta() <   0.0292 )) continue;
+            if(!(fabs(elm->deltaEtaSeedClusterTrackAtVtx()) <  0.00605 )) continue;
+            if(!(fabs(elm->deltaPhiSuperClusterTrackAtVtx()) <  0.0394 )) continue;
+            if(!(elm->hadronicOverEm() < 0.0641 )) continue;
+            GsfElectron::PflowIsolationVariables pfIso = elm->pfIsolationVariables();
+            static double relCombIsoEA = 999.;
+            float abseta = fabs(elm->superCluster()->eta());
+            float eA = effectiveAreas_.getEffectiveArea(abseta);
+            relCombIsoEA = (( pfIso.sumChargedHadronPt
+                              + std::max( 0.0f, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eA*rho) )
+                            / elm->pt() );
+            if( !(relCombIsoEA <  0.0571 )) continue;
+            if(!(fabs(1.0 - elm->eSuperClusterOverP())*(1.0/elm->ecalEnergy()) <  0.0129 )) continue;
+            if( !(elm->gsfTrack()->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS) <= 1)) continue;
+            if( !(elm->passConversionVeto())) continue;
+        }
         double dR =0;
         for(pat::MuonCollection::const_iterator dumMu = muons->begin();dumMu != muons->end();++dumMu){
             if(!(dumMu->isGlobalMuon())) continue;
@@ -738,41 +854,41 @@ cout << "1 here" << endl;
 
     //After Lepton Selection
     if(isPosMu && isNegMu) isDiMuon = true;
-    if(isDiMuon) h_Nevents_DiMu->Fill(1);
-
     if(isPosEl && isNegEl) isDiElectron = true;
-    if(isDiElectron)h_Nevents_DiEl->Fill(1);
     if( isPosEl && isNegMu)  isElMu = true;
     if( isNegEl && isPosMu ) isMuEl = true;
-    if(isElMu || isMuEl) h_Nevents_ElMu->Fill(1);
     if(isDiMuon || isDiElectron || isElMu ) isDiLeptonic = true;
     if(!isDiLeptonic)return;
     //    //++n_afterDiLepton;
     h_Nevents_ALS->Fill(1);
-    if(isDiMuon && !(b_Mu1 || b_Mu2) ) return;
-    if(isDiElectron && !(b_ElEl2)) return;
-    if(isElMu && !(b_ElMu1 || b_ElMu2 || b_ElMu3 || b_ElMu4 || b_MuEl1 || b_MuEl2)) return;
-    if(isMuEl && !(b_ElMu1 || b_ElMu2 || b_ElMu3 || b_ElMu4 || b_MuEl1 || b_MuEl2)) return;
-    //    //++n_afterHLT;
-    h_Nevents_AT->Fill(1);
 
 
+    /////////////////////2 Z Mass Veto //////////////////////////////////
     if(isDiMuon)
     {
         PosLep.SetPtEtaPhiM(posMu.pt(),posMu.eta(),posMu.phi(),posMu.mass());
         NegLep.SetPtEtaPhiM(negMu.pt(),negMu.eta(),negMu.phi(),negMu.mass());
         DiLep = PosLep + NegLep;
-        if((DiLep.M() < 106 && DiLep.M() > 76)) return;
+        if(DiLep.M() < 20) return;
+        h_Nevents_DiMu->Fill(1);
+        if((DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NinMuMu_ALS->Fill(1);
+        }
+        if(!(DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NoutMuMu_ALS->Fill(1);
 
-        h_ALS_etaLMuMu->Fill(posMu.eta(),theWeight);
-        h_ALS_etaLMuMu->Fill(negMu.eta(),theWeight);
-        h_ALS_ptLMuMu->Fill(posMu.pt(),theWeight);
-        h_ALS_ptLMuMu->Fill(negMu.pt(),theWeight);
+            h_ALS_etaLMuMu->Fill(posMu.eta(),theWeight);
+            h_ALS_etaLMuMu->Fill(negMu.eta(),theWeight);
+            h_ALS_ptLMuMu->Fill(posMu.pt(),theWeight);
+            h_ALS_ptLMuMu->Fill(negMu.pt(),theWeight);
 
-        h_ALS_etaLDiLep->Fill(posMu.eta(),theWeight);
-        h_ALS_etaLDiLep->Fill(negMu.eta(),theWeight);
-        h_ALS_ptLDiLep->Fill(posMu.pt(),theWeight);
-        h_ALS_ptLDiLep->Fill(negMu.pt(),theWeight);
+            h_ALS_etaLDiLep->Fill(posMu.eta(),theWeight);
+            h_ALS_etaLDiLep->Fill(negMu.eta(),theWeight);
+            h_ALS_ptLDiLep->Fill(posMu.pt(),theWeight);
+            h_ALS_ptLDiLep->Fill(negMu.pt(),theWeight);
+        }
 
     }
     if(isDiElectron)
@@ -780,16 +896,27 @@ cout << "1 here" << endl;
         PosLep.SetPtEtaPhiM(posEl.pt(),posEl.eta(),posEl.phi(),posEl.mass());
         NegLep.SetPtEtaPhiM(negEl.pt(),negEl.eta(),negEl.phi(),negEl.mass());
         DiLep = PosLep + NegLep;
-        if((DiLep.M() < 106 && DiLep.M() > 76)) return;
-        h_ALS_etaLElEl->Fill(posEl.eta(),theWeight);
-        h_ALS_etaLElEl->Fill(negEl.eta(),theWeight);
-        h_ALS_ptLElEl->Fill(posEl.pt(),theWeight);
-        h_ALS_ptLElEl->Fill(negEl.pt(),theWeight);
+        if(DiLep.M() < 20) return;
+        h_Nevents_DiEl->Fill(1);
 
-        h_ALS_etaLDiLep->Fill(posEl.eta(),theWeight);
-        h_ALS_etaLDiLep->Fill(negEl.eta(),theWeight);
-        h_ALS_ptLDiLep->Fill(posEl.pt(),theWeight);
-        h_ALS_ptLDiLep->Fill(negEl.pt(),theWeight);
+        if((DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NinElEl_ALS->Fill(1);
+        }
+        if(!(DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NoutElEl_ALS->Fill(1);
+
+            h_ALS_etaLElEl->Fill(posEl.eta(),theWeight);
+            h_ALS_etaLElEl->Fill(negEl.eta(),theWeight);
+            h_ALS_ptLElEl->Fill(posEl.pt(),theWeight);
+            h_ALS_ptLElEl->Fill(negEl.pt(),theWeight);
+
+            h_ALS_etaLDiLep->Fill(posEl.eta(),theWeight);
+            h_ALS_etaLDiLep->Fill(negEl.eta(),theWeight);
+            h_ALS_ptLDiLep->Fill(posEl.pt(),theWeight);
+            h_ALS_ptLDiLep->Fill(negEl.pt(),theWeight);
+        }
 
     }
     if(isElMu)
@@ -797,7 +924,13 @@ cout << "1 here" << endl;
         PosLep.SetPtEtaPhiM(posEl.pt(),posEl.eta(),posEl.phi(),posEl.mass());
         NegLep.SetPtEtaPhiM(negMu.pt(),negMu.eta(),negMu.phi(),negMu.mass());
         DiLep = PosLep + NegLep;
-        if((DiLep.M() < 106 && DiLep.M() > 76)) return;
+        if(DiLep.M() < 20) return;
+        h_Nevents_ElMu->Fill(1);
+        if((DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NinElMu_ALS->Fill(1);
+        }
+        //        if((DiLep.M() < 106 && DiLep.M() > 76)) return;
         h_ALS_etaLElMu->Fill(posEl.eta(),theWeight);
         h_ALS_etaLElMu->Fill(negMu.eta(),theWeight);
         h_ALS_ptLElMu->Fill(posEl.pt(),theWeight);
@@ -814,7 +947,13 @@ cout << "1 here" << endl;
         PosLep.SetPtEtaPhiM(posMu.pt(),posMu.eta(),posMu.phi(),posMu.mass());
         NegLep.SetPtEtaPhiM(negEl.pt(),negEl.eta(),negEl.phi(),negEl.mass());
         DiLep = PosLep + NegLep;
-        if((DiLep.M() < 106 && DiLep.M() > 76)) return;
+        if(DiLep.M() < 20) return;
+        h_Nevents_ElMu->Fill(1);
+        if((DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NinElMu_ALS->Fill(1);
+        }
+        //        if((DiLep.M() < 106 && DiLep.M() > 76)) return;
         h_ALS_etaLElMu->Fill(posMu.eta(),theWeight);
         h_ALS_etaLElMu->Fill(negEl.eta(),theWeight);
         h_ALS_ptLElMu->Fill(posMu.pt(),theWeight);
@@ -830,6 +969,8 @@ cout << "1 here" << endl;
 
 
     ///////////////////JETS//////////////////////////////
+    /// \brief bjets
+    ///tightLepVeto
     vector<pat::Jet> bjets;
     vector<pat::Jet> njets;
     //    pat::Jet j;j.bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
@@ -838,14 +979,14 @@ cout << "1 here" << endl;
         if( !( jet_it->pt() > 30 )) continue;
         if( !( fabs(jet_it->eta()) < 2.4 )) continue;
 
-        if( !(jet_it->neutralHadronEnergyFraction() < 0.99 && jet_it->neutralEmEnergyFraction() < 0.99 && (jet_it->chargedMultiplicity() + jet_it->neutralMultiplicity())> 1.
-              && jet_it->chargedHadronEnergyFraction() > 0. && jet_it->chargedEmEnergyFraction() < 0.99 && jet_it->chargedMultiplicity() > 1.)) continue;
+        if( !(jet_it->neutralHadronEnergyFraction() < 0.90 && jet_it->neutralEmEnergyFraction() < 0.90 && (jet_it->chargedMultiplicity() + jet_it->neutralMultiplicity())> 1.
+              && jet_it->chargedHadronEnergyFraction() > 0. && jet_it->chargedEmEnergyFraction() < 0.90 && jet_it->chargedMultiplicity() > 0.)) continue;
         njets.push_back(*jet_it);
-        if( !(jet_it->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") >  0.460 )) continue;          //loose working point for btaging new value is 0.605
+        if( !(jet_it->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") > 0.5426  )) continue;          //loose working point for btaging new value is 0.605
         bjets.push_back(*jet_it);
 
     }
-
+    ////////////////3 Minimal Jet Multiplicity //////////////////
     if(njets.size() < 2) return;
     //    //++n_after2Jets;
     h_Nevents_AJS->Fill(1);
@@ -855,34 +996,63 @@ cout << "1 here" << endl;
         if(isDiMuon)
         {
 
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinMuMu_AJS->Fill(1);
+                if(bjets.size()>2)h_NinMuMu_NoMET_ABS->Fill(1);
+            }
+            if(!(DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NoutMuMu_AJS->Fill(1);
+                if(bjets.size()>2)h_NoutMuMu_NoMET_ABS->Fill(1);
 
-            h_AJS_ptLepMuMu->Fill(posMu.pt(),theWeight);
-            h_AJS_ptLepDiLep->Fill(posMu.pt(),theWeight);
-            h_AJS_ptLepMuMu->Fill(negMu.pt(),theWeight);
-            h_AJS_ptLepDiLep->Fill(negMu.pt(),theWeight);
 
-            h_AJS_etaLepMuMu->Fill(posMu.eta(),theWeight);
-            h_AJS_etaLepDiLep->Fill(posMu.eta(),theWeight);
-            h_AJS_etaLepMuMu->Fill(negMu.eta(),theWeight);
-            h_AJS_etaLepDiLep->Fill(negMu.eta(),theWeight);
+                h_AJS_ptLepMuMu->Fill(posMu.pt(),theWeight);
+                h_AJS_ptLepDiLep->Fill(posMu.pt(),theWeight);
+                h_AJS_ptLepMuMu->Fill(negMu.pt(),theWeight);
+                h_AJS_ptLepDiLep->Fill(negMu.pt(),theWeight);
+
+                h_AJS_etaLepMuMu->Fill(posMu.eta(),theWeight);
+                h_AJS_etaLepDiLep->Fill(posMu.eta(),theWeight);
+                h_AJS_etaLepMuMu->Fill(negMu.eta(),theWeight);
+                h_AJS_etaLepDiLep->Fill(negMu.eta(),theWeight);
+            }
         }
         if(isDiElectron)
         {
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinElEl_AJS->Fill(1);
+                if(bjets.size()>2)h_NinElEl_NoMET_ABS->Fill(1);
 
-            h_AJS_ptLepElEl->Fill(posEl.pt(),theWeight);
-            h_AJS_ptLepDiLep->Fill(posEl.pt(),theWeight);
-            h_AJS_ptLepElEl->Fill(negEl.pt(),theWeight);
-            h_AJS_ptLepDiLep->Fill(negEl.pt(),theWeight);
+            }
+            if(!(DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NoutElEl_AJS->Fill(1);
+                if(bjets.size()>2)h_NinMuMu_NoMET_ABS->Fill(1);
 
-            h_AJS_etaLepElEl->Fill(posEl.eta(),theWeight);
-            h_AJS_etaLepDiLep->Fill(posEl.eta(),theWeight);
-            h_AJS_etaLepElEl->Fill(negEl.eta(),theWeight);
-            h_AJS_etaLepDiLep->Fill(negEl.eta(),theWeight);
+
+                h_AJS_ptLepElEl->Fill(posEl.pt(),theWeight);
+                h_AJS_ptLepDiLep->Fill(posEl.pt(),theWeight);
+                h_AJS_ptLepElEl->Fill(negEl.pt(),theWeight);
+                h_AJS_ptLepDiLep->Fill(negEl.pt(),theWeight);
+
+                h_AJS_etaLepElEl->Fill(posEl.eta(),theWeight);
+                h_AJS_etaLepDiLep->Fill(posEl.eta(),theWeight);
+                h_AJS_etaLepElEl->Fill(negEl.eta(),theWeight);
+                h_AJS_etaLepDiLep->Fill(negEl.eta(),theWeight);
+            }
 
 
         }
         if(isElMu)
         {
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinElMu_AJS->Fill(1);
+                if(bjets.size()>2)h_NinElMu_NoMET_ABS->Fill(1);
+
+            }
 
             h_AJS_ptLepElMu->Fill(posEl.pt(),theWeight);
             h_AJS_ptLepDiLep->Fill(posEl.pt(),theWeight);
@@ -897,6 +1067,12 @@ cout << "1 here" << endl;
         }
         if(isMuEl)
         {
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinElMu_AJS->Fill(1);
+                if(bjets.size()>2)h_NinElMu_NoMET_ABS->Fill(1);
+
+            }
 
             h_AJS_ptLepElMu->Fill(posMu.pt(),theWeight);
             h_AJS_ptLepDiLep->Fill(posMu.pt(),theWeight);
@@ -913,7 +1089,7 @@ cout << "1 here" << endl;
     }
 
 
-    ////////////////////METS PF1//////////////////////////
+    ////////////////////4 METS PF1//////////////////////////
     const pat::MET &met = mets->front();
     if(isDiMuon && met.pt() < 30) return;
     if(isDiElectron && met.pt() < 30) return;
@@ -925,33 +1101,53 @@ cout << "1 here" << endl;
         if(isDiMuon)
         {
 
-            DiLepMass = posMu.mt() + negMu.mt();
-            h_AMS_mLepMuMu->Fill(DiLep.M(),theWeight);
-            h_AMS_mLepDiLep->Fill(DiLep.M(),theWeight);
-            h_AMS_ptLepMuMu->Fill(posMu.pt(),theWeight);
-            h_AMS_ptLepDiLep->Fill(posMu.pt(),theWeight);
-            h_AMS_ptLepMuMu->Fill(negMu.pt(),theWeight);
-            h_AMS_ptLepDiLep->Fill(negMu.pt(),theWeight);
-            h_AMS_METMuMu->Fill(met.pt(),theWeight);
-            h_AMS_METDiLep->Fill(met.pt(),theWeight);
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinMuMu_AMS->Fill(1);
+            }
+            if(!(DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NoutMuMu_AMS->Fill(1);
+
+                h_AMS_mLepMuMu->Fill(DiLep.M(),theWeight);
+                h_AMS_mLepDiLep->Fill(DiLep.M(),theWeight);
+                h_AMS_ptLepMuMu->Fill(posMu.pt(),theWeight);
+                h_AMS_ptLepDiLep->Fill(posMu.pt(),theWeight);
+                h_AMS_ptLepMuMu->Fill(negMu.pt(),theWeight);
+                h_AMS_ptLepDiLep->Fill(negMu.pt(),theWeight);
+                h_AMS_METMuMu->Fill(met.pt(),theWeight);
+                h_AMS_METDiLep->Fill(met.pt(),theWeight);
+            }
         }
         if(isDiElectron)
         {
-            DiLepMass = posEl.mt() + negEl.mt();
-            h_AMS_mLepElEl->Fill(DiLep.M(),theWeight);
-            h_AMS_mLepDiLep->Fill(DiLep.M(),theWeight);
-            h_AMS_ptLepElEl->Fill(posEl.pt(),theWeight);
-            h_AMS_ptLepDiLep->Fill(posEl.pt(),theWeight);
-            h_AMS_ptLepElEl->Fill(negEl.pt(),theWeight);
-            h_AMS_ptLepDiLep->Fill(negEl.pt(),theWeight);
-            h_AMS_METElEl->Fill(met.pt(),theWeight);
-            h_AMS_METDiLep->Fill(met.pt(),theWeight);
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinElEl_AMS->Fill(1);
+            }
+            if(!(DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NoutElEl_AMS->Fill(1);
+
+                h_AMS_mLepElEl->Fill(DiLep.M(),theWeight);
+                h_AMS_mLepDiLep->Fill(DiLep.M(),theWeight);
+                h_AMS_ptLepElEl->Fill(posEl.pt(),theWeight);
+                h_AMS_ptLepDiLep->Fill(posEl.pt(),theWeight);
+                h_AMS_ptLepElEl->Fill(negEl.pt(),theWeight);
+                h_AMS_ptLepDiLep->Fill(negEl.pt(),theWeight);
+                h_AMS_METElEl->Fill(met.pt(),theWeight);
+                h_AMS_METDiLep->Fill(met.pt(),theWeight);
+            }
 
 
         }
         if(isElMu)
         {
-            DiLepMass = posEl.mt() + negMu.mt();
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinElMu_AMS->Fill(1);
+            }
+
             h_AMS_mLepElMu->Fill(DiLep.M(),theWeight);
             h_AMS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_AMS_ptLepElMu->Fill(posEl.pt(),theWeight);
@@ -964,7 +1160,11 @@ cout << "1 here" << endl;
         }
         if(isMuEl)
         {
-            DiLepMass = posMu.mt() + negEl.mt();
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinElMu_AMS->Fill(1);
+            }
+
             h_AMS_mLepElMu->Fill(DiLep.M(),theWeight);
             h_AMS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_AMS_ptLepElMu->Fill(posMu.pt(),theWeight);
@@ -977,7 +1177,7 @@ cout << "1 here" << endl;
 
         }
     }
-
+    /////////////////5 B-jets //////////////
     if(bjets.size() < 2) return;
     ////++n_after2BJets;
     h_Nevents_ABS->Fill(1);
@@ -985,57 +1185,81 @@ cout << "1 here" << endl;
     {
         if(isDiMuon)
         {
-            h_ABS_NBJetsMuMu->Fill(bjets.size());
-            h_ABS_NJetsMuMu->Fill(njets.size());
-            h_ABS_NBJetsDiLep->Fill(bjets.size());
-            h_ABS_NJetsDiLep->Fill(njets.size());
-            h_ABS_etaLeadingJetMuMu->Fill(bjets.at(0).eta(),theWeight);
-            h_ABS_ptLeadingJetMuMu->Fill(bjets.at(0).pt(),theWeight);
-            h_ABS_etaLeadingJetDiLep->Fill(bjets.at(0).eta(),theWeight);
-            h_ABS_ptLeadingJetDiLep->Fill(bjets.at(0).pt(),theWeight);
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinMuMu_ABS->Fill(1);
+                return;
+            }
+            if(!(DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NoutMuMu_ABS->Fill(1);
 
-            DiLepMass = posMu.mt() + negMu.mt();
-            h_ABS_mLepMuMu->Fill(DiLep.M(),theWeight);
-            h_ABS_mLepDiLep->Fill(DiLep.M(),theWeight);
-            h_ABS_ptLepMuMu->Fill(posMu.pt(),theWeight);
-            h_ABS_ptLepDiLep->Fill(posMu.pt(),theWeight);
-            h_ABS_ptLepMuMu->Fill(negMu.pt(),theWeight);
-            h_ABS_ptLepDiLep->Fill(negMu.pt(),theWeight);
-            h_ABS_METMuMu->Fill(met.pt(),theWeight);
-            h_ABS_METDiLep->Fill(met.pt(),theWeight);
-            h_ABS_etaLepMuMu->Fill(posMu.eta(),theWeight);
-            h_ABS_etaLepDiLep->Fill(posMu.eta(),theWeight);
-            h_ABS_etaLepMuMu->Fill(negMu.eta(),theWeight);
-            h_ABS_etaLepDiLep->Fill(negMu.eta(),theWeight);
+                h_ABS_NBJetsMuMu->Fill(bjets.size());
+                h_ABS_NJetsMuMu->Fill(njets.size());
+                h_ABS_NBJetsDiLep->Fill(bjets.size());
+                h_ABS_NJetsDiLep->Fill(njets.size());
+                h_ABS_etaLeadingJetMuMu->Fill(bjets.at(0).eta(),theWeight);
+                h_ABS_ptLeadingJetMuMu->Fill(bjets.at(0).pt(),theWeight);
+                h_ABS_etaLeadingJetDiLep->Fill(bjets.at(0).eta(),theWeight);
+                h_ABS_ptLeadingJetDiLep->Fill(bjets.at(0).pt(),theWeight);
+
+
+                h_ABS_mLepMuMu->Fill(DiLep.M(),theWeight);
+                h_ABS_mLepDiLep->Fill(DiLep.M(),theWeight);
+                h_ABS_ptLepMuMu->Fill(posMu.pt(),theWeight);
+                h_ABS_ptLepDiLep->Fill(posMu.pt(),theWeight);
+                h_ABS_ptLepMuMu->Fill(negMu.pt(),theWeight);
+                h_ABS_ptLepDiLep->Fill(negMu.pt(),theWeight);
+                h_ABS_METMuMu->Fill(met.pt(),theWeight);
+                h_ABS_METDiLep->Fill(met.pt(),theWeight);
+                h_ABS_etaLepMuMu->Fill(posMu.eta(),theWeight);
+                h_ABS_etaLepDiLep->Fill(posMu.eta(),theWeight);
+                h_ABS_etaLepMuMu->Fill(negMu.eta(),theWeight);
+                h_ABS_etaLepDiLep->Fill(negMu.eta(),theWeight);
+            }
         }
         if(isDiElectron)
         {
-            h_ABS_NBJetsElEl->Fill(bjets.size());
-            h_ABS_NJetsElEl->Fill(njets.size());
-            h_ABS_NBJetsDiLep->Fill(bjets.size());
-            h_ABS_NJetsDiLep->Fill(njets.size());
-            h_ABS_etaLeadingJetElEl->Fill(bjets.at(0).eta(),theWeight);
-            h_ABS_ptLeadingJetElEl->Fill(bjets.at(0).pt(),theWeight);
-            h_ABS_etaLeadingJetDiLep->Fill(bjets.at(0).eta(),theWeight);
-            h_ABS_ptLeadingJetDiLep->Fill(bjets.at(0).pt(),theWeight);
-            DiLepMass = posEl.mt() + negEl.mt();
-            h_ABS_mLepElEl->Fill(DiLep.M(),theWeight);
-            h_ABS_mLepDiLep->Fill(DiLep.M(),theWeight);
-            h_ABS_ptLepElEl->Fill(posEl.pt(),theWeight);
-            h_ABS_ptLepDiLep->Fill(posEl.pt(),theWeight);
-            h_ABS_ptLepElEl->Fill(negEl.pt(),theWeight);
-            h_ABS_ptLepDiLep->Fill(negEl.pt(),theWeight);
-            h_ABS_METElEl->Fill(met.pt(),theWeight);
-            h_ABS_METDiLep->Fill(met.pt(),theWeight);
-            h_ABS_etaLepElEl->Fill(posEl.eta(),theWeight);
-            h_ABS_etaLepDiLep->Fill(posEl.eta(),theWeight);
-            h_ABS_etaLepElEl->Fill(negEl.eta(),theWeight);
-            h_ABS_etaLepDiLep->Fill(negEl.eta(),theWeight);
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinElEl_ABS->Fill(1);
+                return;
+            }
+            if(!(DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NoutElEl_ABS->Fill(1);
+
+                h_ABS_NBJetsElEl->Fill(bjets.size());
+                h_ABS_NJetsElEl->Fill(njets.size());
+                h_ABS_NBJetsDiLep->Fill(bjets.size());
+                h_ABS_NJetsDiLep->Fill(njets.size());
+                h_ABS_etaLeadingJetElEl->Fill(bjets.at(0).eta(),theWeight);
+                h_ABS_ptLeadingJetElEl->Fill(bjets.at(0).pt(),theWeight);
+                h_ABS_etaLeadingJetDiLep->Fill(bjets.at(0).eta(),theWeight);
+                h_ABS_ptLeadingJetDiLep->Fill(bjets.at(0).pt(),theWeight);
+
+                h_ABS_mLepElEl->Fill(DiLep.M(),theWeight);
+                h_ABS_mLepDiLep->Fill(DiLep.M(),theWeight);
+                h_ABS_ptLepElEl->Fill(posEl.pt(),theWeight);
+                h_ABS_ptLepDiLep->Fill(posEl.pt(),theWeight);
+                h_ABS_ptLepElEl->Fill(negEl.pt(),theWeight);
+                h_ABS_ptLepDiLep->Fill(negEl.pt(),theWeight);
+                h_ABS_METElEl->Fill(met.pt(),theWeight);
+                h_ABS_METDiLep->Fill(met.pt(),theWeight);
+                h_ABS_etaLepElEl->Fill(posEl.eta(),theWeight);
+                h_ABS_etaLepDiLep->Fill(posEl.eta(),theWeight);
+                h_ABS_etaLepElEl->Fill(negEl.eta(),theWeight);
+                h_ABS_etaLepDiLep->Fill(negEl.eta(),theWeight);
+            }
 
 
         }
         if(isElMu)
         {
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinElMu_ABS->Fill(1);
+            }
             h_ABS_NBJetsElMu->Fill(bjets.size());
             h_ABS_NJetsElMu->Fill(njets.size());
             h_ABS_NBJetsDiLep->Fill(bjets.size());
@@ -1044,7 +1268,7 @@ cout << "1 here" << endl;
             h_ABS_ptLeadingJetElMu->Fill(bjets.at(0).pt(),theWeight);
             h_ABS_etaLeadingJetDiLep->Fill(bjets.at(0).eta(),theWeight);
             h_ABS_ptLeadingJetDiLep->Fill(bjets.at(0).pt(),theWeight);
-            DiLepMass = posEl.mt() + negMu.mt();
+
             h_ABS_mLepElMu->Fill(DiLep.M(),theWeight);
             h_ABS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_ABS_ptLepElMu->Fill(posEl.pt(),theWeight);
@@ -1061,6 +1285,10 @@ cout << "1 here" << endl;
         }
         if(isMuEl)
         {
+            if((DiLep.M() < 106 && DiLep.M() > 76))
+            {
+                h_NinElMu_ABS->Fill(1);
+            }
             h_ABS_NBJetsElMu->Fill(bjets.size());
             h_ABS_NJetsElMu->Fill(njets.size());
             h_ABS_NBJetsDiLep->Fill(bjets.size());
@@ -1069,7 +1297,7 @@ cout << "1 here" << endl;
             h_ABS_ptLeadingJetElMu->Fill(bjets.at(0).pt(),theWeight);
             h_ABS_etaLeadingJetDiLep->Fill(bjets.at(0).eta(),theWeight);
             h_ABS_ptLeadingJetDiLep->Fill(bjets.at(0).pt(),theWeight);
-            DiLepMass = posMu.mass() + negEl.mass();
+
             h_ABS_mLepElMu->Fill(DiLep.M(),theWeight);
             h_ABS_mLepDiLep->Fill(DiLep.M(),theWeight);
             h_ABS_ptLepElMu->Fill(posMu.pt(),theWeight);
@@ -2036,14 +2264,43 @@ void MiniAnalyzer::beginJob() {
     h_Nevents_ElMu = fs->make<TH1F>("h_Nevents_ElMu","",10,-3,3);
     h_Nevents_top = fs->make<TH1F>("h_Nevents_top","",10,-3,3);
 
-
+    h_NinMuMu_ALS = fs->make<TH1F>("h_NinMuMu_ALS","",10,-3,3);
+    h_NinElEl_ALS = fs->make<TH1F>("h_NinElEl_ALS","",10,-3,3);
+    h_NinElMu_ALS = fs->make<TH1F>("h_NinElMu_ALS","",10,-3,3);
+    h_NoutMuMu_ALS = fs->make<TH1F>("h_NoutMuMu_ALS","",10,-3,3);
+    h_NoutElEl_ALS = fs->make<TH1F>("h_NoutElEl_ALS","",10,-3,3);
+    h_NoutElMu_ALS = fs->make<TH1F>("h_NoutElMu_ALS","",10,-3,3);
+    h_NinMuMu_AJS = fs->make<TH1F>("h_NinMuMu_AJS","",10,-3,3);
+    h_NinElEl_AJS = fs->make<TH1F>("h_NinElEl_AJS","",10,-3,3);
+    h_NinElMu_AJS = fs->make<TH1F>("h_NinElMu_AJS","",10,-3,3);
+    h_NoutMuMu_AJS = fs->make<TH1F>("h_NoutMuMu_AJS","",10,-3,3);
+    h_NoutElEl_AJS = fs->make<TH1F>("h_NoutElEl_AJS","",10,-3,3);
+    h_NoutElMu_AJS = fs->make<TH1F>("h_NoutElMu_AJS","",10,-3,3);
+    h_NinMuMu_AMS = fs->make<TH1F>("h_NinMuMu_AMS","",10,-3,3);
+    h_NinElEl_AMS = fs->make<TH1F>("h_NinElEl_AMS","",10,-3,3);
+    h_NinElMu_AMS = fs->make<TH1F>("h_NinElMu_AMS","",10,-3,3);
+    h_NoutMuMu_AMS = fs->make<TH1F>("h_NoutMuMu_AMS","",10,-3,3);
+    h_NoutElEl_AMS = fs->make<TH1F>("h_NoutElEl_AMS","",10,-3,3);
+    h_NoutElMu_AMS = fs->make<TH1F>("h_NoutElMu_AMS","",10,-3,3);
+    h_NinMuMu_ABS = fs->make<TH1F>("h_NinMuMu_ABS","",10,-3,3);
+    h_NinElEl_ABS = fs->make<TH1F>("h_NinElEl_ABS","",10,-3,3);
+    h_NinElMu_ABS = fs->make<TH1F>("h_NinElMu_ABS","",10,-3,3);
+    h_NoutMuMu_ABS = fs->make<TH1F>("h_NoutMuMu_ABS","",10,-3,3);
+    h_NoutElEl_ABS = fs->make<TH1F>("h_NoutElEl_ABS","",10,-3,3);
+    h_NoutElMu_ABS = fs->make<TH1F>("h_NoutElMu_ABS","",10,-3,3);
+    h_NinMuMu_NoMET_ABS = fs->make<TH1F>("h_NinMuMu_NoMET_ABS","",10,-3,3);
+    h_NinElEl_NoMET_ABS = fs->make<TH1F>("h_NinElEl_NoMET_ABS","",10,-3,3);
+    h_NinElMu_NoMET_ABS = fs->make<TH1F>("h_NinElMu_NoMET_ABS","",10,-3,3);
+    h_NoutMuMu_NoMET_ABS = fs->make<TH1F>("h_NoutMuMu_NoMET_ABS","",10,-3,3);
+    h_NoutElEl_NoMET_ABS = fs->make<TH1F>("h_NoutElEl_NoMET_ABS","",10,-3,3);
+    h_NoutElMu_NoMET_ABS = fs->make<TH1F>("h_NoutElMu_NoMET_ABS","",10,-3,3);
 
 
     //initialize the tree
     f_outFile->cd();
     t_outTree =  new TTree("tree","tr");
-//    t_outTree->Branch("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v",&b_Mu1);
-//    t_outTree->Branch("SlimmedMuon_Pt",&SlimmedMuon_Pt);
+    //    t_outTree->Branch("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v",&b_Mu1);
+    //    t_outTree->Branch("SlimmedMuon_Pt",&SlimmedMuon_Pt);
     //    t_outTree->Branch("TotalNumberOfEvents",&NEvent,"TotalNumberOfEvents/I");
     //    t_outTree->Branch("NGoodvtx",&nGoodVtxs,"NGoodvtx/I");
     //    t_outTree->Branch("RecoCos",&RecoCos);
@@ -2113,19 +2370,19 @@ void MiniAnalyzer::endRun(const Run & iRun, const EventSetup &){
     cout << "isPythia: "<<isPythia << endl;
     cout << "Why here" <<endl;
 
-        edm::Handle<LHERunInfoProduct> run;
-        typedef std::vector<LHERunInfoProduct::Header>::const_iterator headers_const_iterator;
-        iRun.getByToken(lheInfo_,run);
-        //    iRun.getByLabel( "externalLHEProducer", run );
-        LHERunInfoProduct myLHERunInfoProduct = *(run.product());
+    edm::Handle<LHERunInfoProduct> run;
+    typedef std::vector<LHERunInfoProduct::Header>::const_iterator headers_const_iterator;
+    iRun.getByToken(lheInfo_,run);
+    //    iRun.getByLabel( "externalLHEProducer", run );
+    LHERunInfoProduct myLHERunInfoProduct = *(run.product());
 
-        for (headers_const_iterator iter=myLHERunInfoProduct.headers_begin(); iter!=myLHERunInfoProduct.headers_end(); iter++){
-            std::cout << iter->tag() << std::endl;
-            std::vector<std::string> lines = iter->lines();
-            for (unsigned int iLine = 0; iLine<lines.size(); iLine++) {
-                std::cout << lines.at(iLine);
-            }
+    for (headers_const_iterator iter=myLHERunInfoProduct.headers_begin(); iter!=myLHERunInfoProduct.headers_end(); iter++){
+        std::cout << iter->tag() << std::endl;
+        std::vector<std::string> lines = iter->lines();
+        for (unsigned int iLine = 0; iLine<lines.size(); iLine++) {
+            std::cout << lines.at(iLine);
         }
+    }
 
 }
 
