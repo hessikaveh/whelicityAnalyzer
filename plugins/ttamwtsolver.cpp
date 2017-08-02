@@ -28,7 +28,7 @@ TtAMWTSolver::TtAMWTSolver(bool isData, const double b, const double e, const do
     //PDF Initialization
     string path;
     path = getEnvVar("LHAPDF_DATA_PATH");
-    string pdfSet = "cteq6l1";
+    string pdfSet = "NNPDF30_nlo_as_0118";
     LHAPDF::setPDFPath(path);
     LHAPDF::initPDFSet(pdfSet);
 

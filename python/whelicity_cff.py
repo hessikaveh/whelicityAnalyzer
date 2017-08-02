@@ -28,7 +28,15 @@ Whelicity = cms.EDAnalyzer("MiniAnalyzer",
 	triggerFilters = cms.InputTag("TriggerResults","","PAT"),
         DiMu = cms.bool(False),
         DiEl = cms.bool(False),
-        ElMu = cms.bool(False)
+        ElMu = cms.bool(False),
+		egammaSF = cms.string("egammaEffi.txt_EGM2D.root"),
+		isRunGH = cms.bool(False),
+		muonISOSF = cms.string("ISOEfficienciesAndSF_BCDEF.root"),
+		muonIDSF = cms.string("IDEfficienciesAndSF_BCDEF.root"),
+		egammaTkSF = cms.string("TkegammaEffi.txt_EGM2D.root"),
+		btagSf = cms.string("CSVv2_Moriond17_B_H.csv"),
+		muonTkSF = cms.string("Tracking_EfficienciesAndSF_BCDEFGH.root")
+
 	
 )
 

@@ -21,4 +21,6 @@
 <use name="RecoEgamma/EgammaTools"/>
 <use name="LHAPDF"/>
 <use name="JetMETCorrections/Modules"/>
+<use name="CondFormats/BTauObjects"/>
+<use name="CondTools/BTau"/>
 <flags EDM_PLUGIN="1"/>
