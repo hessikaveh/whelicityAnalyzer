@@ -18,7 +18,7 @@ bool mse::isBHadron(int pdgId)
 bool mse::decaysToB(const reco::GenParticle& gp)
 {
     for ( size_t di=0; di<gp.numberOfDaughters(); di++ ) {
-        const reco::Candidate* dau = gp.daughter( di ) ; 
+        const reco::Candidate* dau = gp.daughter( di ) ;
         if ( isBHadron( dau->pdgId() ) ) return true ;
     } // di
     return false ;
@@ -40,35 +40,14 @@ bool mse::isCHadron(int pdgId)
 bool mse::decaysToC(const reco::GenParticle& gp)
 {
     for ( size_t di=0; di<gp.numberOfDaughters(); di++ ) {
-        const reco::Candidate* dau = gp.daughter( di ) ; 
+        const reco::Candidate* dau = gp.daughter( di ) ;
         if ( isCHadron( dau->pdgId() ) ) return true ;
     } // di
     return false ;
 } // decaysToC
 
 
-const pat::PackedGenParticle mse::getMatchedGenParticle(const pat::Muon& muon, const edm::View<pat::PackedGenParticle> &gpcol, int absPdgId)
-{
-    LorentzVector mup4(muon.p4());    
-    double minDR = 999.;
-    edm::View<pat::PackedGenParticle>::const_iterator gen_end = gpcol.end();
-    pat::PackedGenParticle matched_gen;
-    for (edm::View<pat::PackedGenParticle>::const_iterator it = gpcol.begin(); it != gen_end; it++)
-    {
-        LorentzVector gp4(it->p4());
-        double dr = ROOT::Math::VectorUtil::DeltaR(mup4, gp4);
-        if (dr < 0.1 && abs(it->pdgId()) == absPdgId) return (*it);
-        if (dr < minDR)
-        {
-            minDR = dr;
-            matched_gen = *it;
-        }
-    }
-
-    if (minDR < 0.1) return matched_gen;
-    return pat::PackedGenParticle();
-}
-const pat::PackedGenParticle mse::getMatchedGenParticle(const pat::Electron& muon, const edm::View<pat::PackedGenParticle> &gpcol, int absPdgId)
+const pat::PackedGenParticle mse::getMatchedGenParticle(const pat::GenericParticle& muon, const edm::View<pat::PackedGenParticle> &gpcol, int absPdgId)
 {
     LorentzVector mup4(muon.p4());
     double minDR = 999.;
@@ -89,11 +68,32 @@ const pat::PackedGenParticle mse::getMatchedGenParticle(const pat::Electron& muo
     if (minDR < 0.1) return matched_gen;
     return pat::PackedGenParticle();
 }
+//const pat::PackedGenParticle mse::getMatchedGenParticle(const pat::GenericParticle& muon, const edm::View<pat::PackedGenParticle> &gpcol, int absPdgId)
+//{
+//    LorentzVector mup4(muon.p4());
+//    double minDR = 999.;
+//    edm::View<pat::PackedGenParticle>::const_iterator gen_end = gpcol.end();
+//    pat::PackedGenParticle matched_gen;
+//    for (edm::View<pat::PackedGenParticle>::const_iterator it = gpcol.begin(); it != gen_end; it++)
+//    {
+//        LorentzVector gp4(it->p4());
+//        double dr = ROOT::Math::VectorUtil::DeltaR(mup4, gp4);
+//        if (dr < 0.1 && abs(it->pdgId()) == absPdgId) return (*it);
+//        if (dr < minDR)
+//        {
+//            minDR = dr;
+//            matched_gen = *it;
+//        }
+//    }
+//
+//    if (minDR < 0.1) return matched_gen;
+//    return pat::PackedGenParticle();
+//}
 
 const reco::GenParticle mse::getMotherPacked(const pat::PackedGenParticle& pgp)
 {
     if (pgp.numberOfMothers() > 0)
-    {        
+    {
         const reco::GenParticle* firstMother = (const reco::GenParticle*)pgp.mother(0);
         if (firstMother != 0)
         {
@@ -129,7 +129,7 @@ mse::MuonParentage mse::getParentType(const reco::GenParticle& gp)
 {
     unsigned int pdgId = abs(gp.pdgId());
     if (pdgId == 15 || pdgId == 23 || pdgId == 24 || pdgId == 25) return mse::MuonParentage::PROMPT;
-    if (mse::isBHadron(pdgId) || mse::isCHadron(pdgId)) return mse::MuonParentage::HF;    
+    if (mse::isBHadron(pdgId) || mse::isCHadron(pdgId)) return mse::MuonParentage::HF;
     return mse::MuonParentage::LF;
 }
 

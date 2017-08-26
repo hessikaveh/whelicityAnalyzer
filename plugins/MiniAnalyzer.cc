@@ -26,9 +26,12 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-
+#include "DataFormats/RecoCandidate/interface/RecoCandidate.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/PatCandidates/interface/Particle.h"
+#include "DataFormats/PatCandidates/interface/GenericParticle.h"
+#include "DataFormats/PatCandidates/interface/Lepton.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/PatCandidates/interface/Tau.h"
@@ -71,6 +74,16 @@ using namespace reco;
 //
 // class declaration
 //
+struct MyLepton
+{
+    string type;
+    //pat::Particle pat_particle;
+   // pat::Electron pat_particle;
+    pat::GenericParticle pat_particle;
+    //pat::Lepton<reco::Particle> pat_particle;
+
+};
+
 
 class MiniAnalyzer : public edm::EDAnalyzer
 {
@@ -607,7 +620,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     }
     else
     {
-       // Double Muon  36.811 fb^-1 Mu1 or Mu2
+        // Double Muon  36.811 fb^-1 Mu1 or Mu2
         Mu1="HLT_IsoMu24_v";
         Mu2="HLT_IsoTkMu24_v";
 
@@ -648,31 +661,31 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         if(st.compare(Mu1) == 0)
         {
             b_Mu1 = trigResults->accept(i);
-            if(b_Mu1) cout << st << endl;
+           // if(b_Mu1) cout << st << endl;
         }
         else if(st.compare(Mu2) == 0)
         {
             b_Mu2 = trigResults->accept(i);
-            if(b_Mu2) cout << st << endl;
+            //if(b_Mu2) cout << st << endl;
         }
         else if(st.compare(Mu3) == 0)
         {
             b_Mu3 = trigResults->accept(i);
-            if(b_Mu3) cout << st << endl;
+            //if(b_Mu3) cout << st << endl;
         }
         else if(st.compare(Mu4) == 0)
         {
             b_Mu4 = trigResults->accept(i);
-            if(b_Mu4) cout << st << endl;
+            //if(b_Mu4) cout << st << endl;
         }
         else if(st.compare(MuMu1) == 0)
         {
-            b_MuMu1 = trigResults->accept(i);
+            //b_MuMu1 = trigResults->accept(i);
 //            cout << st << endl;
         }
         else if(st.compare(MuMu2) == 0)
         {
-            b_MuMu2 = trigResults->accept(i);
+            //b_MuMu2 = trigResults->accept(i);
 //            cout << st << endl;
         }
         else if(st.compare(ElEl1) == 0)
@@ -688,47 +701,47 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         else if(st.compare(El1) == 0)
         {
             b_El1 = trigResults->accept(i);
-            if(b_El1) cout << st << endl;
+            //if(b_El1) cout << st << endl;
         }
         else if(st.compare(El2) == 0)
         {
             b_El2 = trigResults->accept(i);
-            if(b_El2) cout << st << endl;
+            //if(b_El2) cout << st << endl;
         }
         else if(st.compare(El3) == 0)
         {
             b_El3 = trigResults->accept(i);
-            if(b_El3) cout << st << endl;
+            //if(b_El3) cout << st << endl;
         }
         else if(st.compare(ElMu1) == 0)
         {
             b_ElMu1 = trigResults->accept(i);
-            if(b_ElMu1) cout << st << endl;
+            //if(b_ElMu1) cout << st << endl;
         }
         else if(st.compare(ElMu2) == 0)
         {
             b_ElMu2 = trigResults->accept(i);
-            if(b_ElMu2) cout << st << endl;
+            //if(b_ElMu2) cout << st << endl;
         }
         else if(st.compare(ElMu3) == 0)
         {
             b_ElMu3 = trigResults->accept(i);
-            if(b_ElMu3) cout << st << endl;
+            //if(b_ElMu3) cout << st << endl;
         }
         else if(st.compare(ElMu4) == 0)
         {
             b_ElMu4 = trigResults->accept(i);
-            if(b_ElMu4) cout << st << endl;
+            //if(b_ElMu4) cout << st << endl;
         }
         else if(st.compare(ElMu5) == 0)
         {
             b_ElMu5 = trigResults->accept(i);
-            if(b_ElMu5) cout << st << endl;
+            //if(b_ElMu5) cout << st << endl;
         }
         else if(st.compare(ElMu6) == 0)
         {
             b_ElMu6 = trigResults->accept(i);
-            if(b_ElMu6) cout << st << endl;
+            //if(b_ElMu6) cout << st << endl;
         }
         //////////////PRINT ALL TRIGGER PASSES /////////////////////
         //        std::cout << "Trigger " << trigNames.triggerName(i) << "i: "<<i
@@ -878,13 +891,19 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     /// finding pos and neg muon with highest pt
     /// tight muon
 
-    pat::Muon posMu;
-    pat::Muon negMu;
+    pat::GenericParticle posMu;
+    pat::GenericParticle negMu;
+    pat::GenericParticle posEl;
+    pat::GenericParticle negEl;
+    vector<pat::Muon> MyMuons;
+    vector<pat::Electron> MyElectrons;
+    vector<MyLepton> MyLeptons;
+
 
     for (pat::MuonCollection::const_iterator mup = muons->begin(); mup != muons->end(); ++mup)
     {
 
-        if( !(mup->charge() > 0)) continue;
+//        if( !(mup->charge() > 0)) continue;
         if( !(mup->pt() > 20.0 )) continue;
         if( !(fabs(mup->eta()) < 2.4 )) continue;
         if( !(mup->isPFMuon())) continue;
@@ -904,49 +923,50 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             coriso = pfR04.sumChargedHadronPt + std::max(0., pfR04.sumNeutralHadronEt+pfR04.sumPhotonEt-0.5*pfR04.sumPUPt);
         }
         if (!(coriso/mup->pt() <  0.15)) continue;
-        if(mup->pt() > posMu.pt() ) posMu = *mup;
+        MyMuons.push_back(*mup);
+//        if(mup->pt() > posMu.pt() ) posMu = *mup;
         //        // cout << mup->pt() <<endl;
         //        // cout << posMu.pt() << endl;
         h_PtMu->Fill(mup->pt(),theWeight);
 
         h_etaMu->Fill(mup->eta(),theWeight);
-        isPosMu = true;
+//        isPosMu = true;
 
     }
 
-    for (pat::MuonCollection::const_iterator mum = muons->begin(); mum != muons->end(); ++mum)
-    {
-        if( !(mum->charge() < 0)) continue;
-        if( !(mum->pt() > 20.0 )) continue;
-        if( !(fabs(mum->eta()) < 2.4 )) continue;
-        if( !(mum->isPFMuon())) continue;
-        if( !(mum->isGlobalMuon())) continue;
-        if( !(mum->globalTrack()->normalizedChi2() < 10)) continue;
-        if( !(mum->globalTrack()->hitPattern().numberOfValidMuonHits() > 0)) continue;
-        if( !(mum->numberOfMatchedStations() > 1)) continue;
-        if( !(fabs(mum->muonBestTrack()->dxy(PV->position())) < 0.2)) continue;
-        if( !(fabs(mum->muonBestTrack()->dz(PV->position())) < 0.5)) continue;
-        if( !(mum->innerTrack()->hitPattern().numberOfValidPixelHits() > 0)) continue;
-        if( !(mum->innerTrack()->hitPattern().trackerLayersWithMeasurement() > 5)) continue;
-        //        if( !(mum->isPFMuon())) continue;
-        //        if( !(mum->isGlobalMuon() || mum->isTrackerMuon())) continue;
-        //        if(!isMediumMuon(*mum)) continue;
-        //        if(!(mum->isTightMuon(*PV))) continue;
-
-        if( mum->isIsolationValid())
-        {
-            reco::MuonPFIsolation pfR04 = mum->pfIsolationR04();
-            coriso2 = pfR04.sumChargedHadronPt + std::max(0., pfR04.sumNeutralHadronEt+pfR04.sumPhotonEt-0.5*pfR04.sumPUPt);
-        }
-        if (!(coriso2/mum->pt() <  0.15)) continue;
-        if(mum->pt() > negMu.pt() ) negMu = *mum;
-        h_PtMu->Fill(mum->pt(),theWeight);
-
-        h_etaMu->Fill(mum->eta(),theWeight);
-        isNegMu = true;
-
-
-    }
+//    for (pat::MuonCollection::const_iterator mum = muons->begin(); mum != muons->end(); ++mum)
+//    {
+//        if( !(mum->charge() < 0)) continue;
+//        if( !(mum->pt() > 20.0 )) continue;
+//        if( !(fabs(mum->eta()) < 2.4 )) continue;
+//        if( !(mum->isPFMuon())) continue;
+//        if( !(mum->isGlobalMuon())) continue;
+//        if( !(mum->globalTrack()->normalizedChi2() < 10)) continue;
+//        if( !(mum->globalTrack()->hitPattern().numberOfValidMuonHits() > 0)) continue;
+//        if( !(mum->numberOfMatchedStations() > 1)) continue;
+//        if( !(fabs(mum->muonBestTrack()->dxy(PV->position())) < 0.2)) continue;
+//        if( !(fabs(mum->muonBestTrack()->dz(PV->position())) < 0.5)) continue;
+//        if( !(mum->innerTrack()->hitPattern().numberOfValidPixelHits() > 0)) continue;
+//        if( !(mum->innerTrack()->hitPattern().trackerLayersWithMeasurement() > 5)) continue;
+//        //        if( !(mum->isPFMuon())) continue;
+//        //        if( !(mum->isGlobalMuon() || mum->isTrackerMuon())) continue;
+//        //        if(!isMediumMuon(*mum)) continue;
+//        //        if(!(mum->isTightMuon(*PV))) continue;
+//
+//        if( mum->isIsolationValid())
+//        {
+//            reco::MuonPFIsolation pfR04 = mum->pfIsolationR04();
+//            coriso2 = pfR04.sumChargedHadronPt + std::max(0., pfR04.sumNeutralHadronEt+pfR04.sumPhotonEt-0.5*pfR04.sumPUPt);
+//        }
+//        if (!(coriso2/mum->pt() <  0.15)) continue;
+//        if(mum->pt() > negMu.pt() ) negMu = *mum;
+//        h_PtMu->Fill(mum->pt(),theWeight);
+//
+//        h_etaMu->Fill(mum->eta(),theWeight);
+//        isNegMu = true;
+//
+//
+//    }
 
 
     //    // cout << posMu.charge() << " charges " << negMu.charge() << endl;
@@ -954,15 +974,14 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     /// electron identification
     /////tight electrons
 
-    pat::Electron posEl;
-    pat::Electron negEl;
+
 
 
     for (pat::ElectronCollection::const_iterator elp = electrons->begin(); elp != electrons->end(); ++elp)
     {
 //        if(elp->isElectronIDAvailable("egmGsfElectronIDs:cutBasedElectronID-Summer16-80X-V1-tight")) cout << "id available!!!!!!!!!!!!!!!!"<<endl;
 
-        if( !( elp->charge() > 0 ) ) continue;
+//        if( !( elp->charge() > 0 ) ) continue;
         if( !( elp->pt() > 20 ) ) continue;
         if( !( fabs(elp->eta() ) < 2.5)) continue;
         if( ( fabs(elp->superCluster()->eta())>1.4442 && fabs(elp->superCluster()->eta())<1.5660)) continue;
@@ -1021,76 +1040,203 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 //            if(!(dR > 0.1)) break;
 //        }
 //        if(!(dR > 0.1)) continue;
-        if( elp->pt() > posEl.pt() ) posEl = *elp;
-        isPosEl = true;
+        MyElectrons.push_back(*elp);
+//        if( elp->pt() > posEl.pt() ) posEl = *elp;
+//        isPosEl = true;
 
     }
 
 
-    for (pat::ElectronCollection::const_iterator elm = electrons->begin(); elm != electrons->end(); ++elm)
+    //    for (pat::ElectronCollection::const_iterator elm = electrons->begin(); elm != electrons->end(); ++elm)
+    //    {
+    //        if( !( elm->charge() < 0 ) ) continue;
+    //        if( !( elm->pt() > 20 ) ) continue;
+    //        if( !( fabs(elm->eta() ) < 2.5)) continue;
+    //        if( ( fabs(elm->superCluster()->eta())>1.4442 && fabs(elm->superCluster()->eta())<1.5660)) continue;
+    //
+    //        //barrel
+    //        if(fabs(elm->superCluster()->eta()) <= 1.479)
+    //        {
+    //            //impact parameters
+    ////            if( !( elm->gsfTrack()->d0() < 0.05 )) continue;
+    ////            if(!( elm->gsfTrack()->dz() < 0.10)) continue;
+    //            //tuned selection
+    //            if(!(elm->full5x5_sigmaIetaIeta() <  0.00998)) continue;
+    //            if(!(fabs(elm->deltaEtaSeedClusterTrackAtVtx()) < 0.00308)) continue;
+    //            if(!(fabs(elm->deltaPhiSuperClusterTrackAtVtx()) <  0.0816 )) continue;
+    //            if(!(elm->hadronicOverEm() < 0.0414 )) continue;
+    //            GsfElectron::PflowIsolationVariables pfIso = elm->pfIsolationVariables();
+    //            static double relCombIsoEA = 999.;
+    //            float abseta = fabs(elm->superCluster()->eta());
+    //            float eA = effectiveAreas_.getEffectiveArea(abseta);
+    //            relCombIsoEA = (( pfIso.sumChargedHadronPt
+    //                              + std::max( 0.0f, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eA*rho) )
+    //                            / elm->pt() );
+    //            if( !(relCombIsoEA <  0.0588 )) continue;
+    //            if(!(fabs(1.0 - elm->eSuperClusterOverP())*(1.0/elm->ecalEnergy()) <  0.0129 )) continue;
+    //            if( !(elm->gsfTrack()->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS) <= 1)) continue;
+    //            if( !(elm->passConversionVeto())) continue;
+    //        }
+    //        else //endcap
+    //        {
+    //            //impact parameters
+    ////            if( !( elm->gsfTrack()->d0() < 0.1 )) continue;
+    ////            if(!( elm->gsfTrack()->dz() < 0.20)) continue;
+    //            //tuned selection
+    //            if(!(elm->full5x5_sigmaIetaIeta() <   0.0292 )) continue;
+    //            if(!(fabs(elm->deltaEtaSeedClusterTrackAtVtx()) <  0.00605 )) continue;
+    //            if(!(fabs(elm->deltaPhiSuperClusterTrackAtVtx()) <  0.0394 )) continue;
+    //            if(!(elm->hadronicOverEm() < 0.0641 )) continue;
+    //            GsfElectron::PflowIsolationVariables pfIso = elm->pfIsolationVariables();
+    //            static double relCombIsoEA = 999.;
+    //            float abseta = fabs(elm->superCluster()->eta());
+    //            float eA = effectiveAreas_.getEffectiveArea(abseta);
+    //            relCombIsoEA = (( pfIso.sumChargedHadronPt
+    //                              + std::max( 0.0f, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eA*rho) )
+    //                            / elm->pt() );
+    //            if( !(relCombIsoEA <  0.0571 )) continue;
+    //            if(!(fabs(1.0 - elm->eSuperClusterOverP())*(1.0/elm->ecalEnergy()) <  0.0129 )) continue;
+    //            if( !(elm->gsfTrack()->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS) <= 1)) continue;
+    //            if( !(elm->passConversionVeto())) continue;
+    //        }
+    ////        double dR =0;
+    ////        for(pat::MuonCollection::const_iterator dumMu = muons->begin();dumMu != muons->end();++dumMu){
+    ////            if(!(dumMu->isGlobalMuon())) continue;
+    ////            dR = ROOT::Math::VectorUtil::DeltaR(dumMu->p4(),elm->p4());
+    ////            if(!(dR > 0.1)) break;
+    ////        }
+    ////        if(!(dR > 0.1)) continue;
+    //        if( elm->pt() > negEl.pt() ) negEl = *elm;
+    //        isNegEl = true;
+    //
+    //    }
+
+    if(MyMuons.size() > 0 && MyElectrons.size() >0 )
     {
-        if( !( elm->charge() < 0 ) ) continue;
-        if( !( elm->pt() > 20 ) ) continue;
-        if( !( fabs(elm->eta() ) < 2.5)) continue;
-        if( ( fabs(elm->superCluster()->eta())>1.4442 && fabs(elm->superCluster()->eta())<1.5660)) continue;
-
-        //barrel
-        if(fabs(elm->superCluster()->eta()) <= 1.479)
+        for(vector<pat::Muon>::const_iterator mu_it = MyMuons.begin(); mu_it != MyMuons.end(); ++mu_it)
         {
-            //impact parameters
-//            if( !( elm->gsfTrack()->d0() < 0.05 )) continue;
-//            if(!( elm->gsfTrack()->dz() < 0.10)) continue;
-            //tuned selection
-            if(!(elm->full5x5_sigmaIetaIeta() <  0.00998)) continue;
-            if(!(fabs(elm->deltaEtaSeedClusterTrackAtVtx()) < 0.00308)) continue;
-            if(!(fabs(elm->deltaPhiSuperClusterTrackAtVtx()) <  0.0816 )) continue;
-            if(!(elm->hadronicOverEm() < 0.0414 )) continue;
-            GsfElectron::PflowIsolationVariables pfIso = elm->pfIsolationVariables();
-            static double relCombIsoEA = 999.;
-            float abseta = fabs(elm->superCluster()->eta());
-            float eA = effectiveAreas_.getEffectiveArea(abseta);
-            relCombIsoEA = (( pfIso.sumChargedHadronPt
-                              + std::max( 0.0f, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eA*rho) )
-                            / elm->pt() );
-            if( !(relCombIsoEA <  0.0588 )) continue;
-            if(!(fabs(1.0 - elm->eSuperClusterOverP())*(1.0/elm->ecalEnergy()) <  0.0129 )) continue;
-            if( !(elm->gsfTrack()->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS) <= 1)) continue;
-            if( !(elm->passConversionVeto())) continue;
+            for(vector<pat::Electron>::const_iterator el_it = MyElectrons.begin(); el_it != MyElectrons.end(); ++el_it)
+            {
+                if(mu_it->pt() > el_it->pt())
+                {
+                    MyLeptons.push_back({"muon",*mu_it});
+                }
+                else
+                {
+                    MyLeptons.push_back({"electron",*el_it});
+                }
+            }
         }
-        else //endcap
-        {
-            //impact parameters
-//            if( !( elm->gsfTrack()->d0() < 0.1 )) continue;
-//            if(!( elm->gsfTrack()->dz() < 0.20)) continue;
-            //tuned selection
-            if(!(elm->full5x5_sigmaIetaIeta() <   0.0292 )) continue;
-            if(!(fabs(elm->deltaEtaSeedClusterTrackAtVtx()) <  0.00605 )) continue;
-            if(!(fabs(elm->deltaPhiSuperClusterTrackAtVtx()) <  0.0394 )) continue;
-            if(!(elm->hadronicOverEm() < 0.0641 )) continue;
-            GsfElectron::PflowIsolationVariables pfIso = elm->pfIsolationVariables();
-            static double relCombIsoEA = 999.;
-            float abseta = fabs(elm->superCluster()->eta());
-            float eA = effectiveAreas_.getEffectiveArea(abseta);
-            relCombIsoEA = (( pfIso.sumChargedHadronPt
-                              + std::max( 0.0f, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - eA*rho) )
-                            / elm->pt() );
-            if( !(relCombIsoEA <  0.0571 )) continue;
-            if(!(fabs(1.0 - elm->eSuperClusterOverP())*(1.0/elm->ecalEnergy()) <  0.0129 )) continue;
-            if( !(elm->gsfTrack()->hitPattern().numberOfLostHits(HitPattern::MISSING_INNER_HITS) <= 1)) continue;
-            if( !(elm->passConversionVeto())) continue;
-        }
-//        double dR =0;
-//        for(pat::MuonCollection::const_iterator dumMu = muons->begin();dumMu != muons->end();++dumMu){
-//            if(!(dumMu->isGlobalMuon())) continue;
-//            dR = ROOT::Math::VectorUtil::DeltaR(dumMu->p4(),elm->p4());
-//            if(!(dR > 0.1)) break;
-//        }
-//        if(!(dR > 0.1)) continue;
-        if( elm->pt() > negEl.pt() ) negEl = *elm;
-        isNegEl = true;
 
     }
+    else if(MyElectrons.size() == 0)
+    {
+        for(vector<pat::Muon>::const_iterator mu_it = MyMuons.begin(); mu_it != MyMuons.end(); ++mu_it)
+        {
+            MyLeptons.push_back({"muon",*mu_it});
+        }
+    }
+    else if(MyMuons.size() == 0)
+    {
+        for(vector<pat::Electron>::const_iterator el_it = MyElectrons.begin(); el_it != MyElectrons.end(); ++el_it)
+        {
+            MyLeptons.push_back({"electron",*el_it});
+        }
+    }
 
+
+    if(MyLepton[0].pat_particle.charge() != MyLeptons[1].pat_particle.charge())
+    {
+        if(MyLepton[0].type == "muon")
+        {
+            if(MyLepton[0].pat_particle.charge() > 0)
+            {
+                 posMu = MyLepton[0].pat_particle;
+                isPosMu = true;
+            }
+            else if(MyLepton[0].pat_particle.charge() < 0)
+            {
+                negMu = MyLepton[0].pat_particle;
+                isNegMu = true;
+            }
+        }
+        else if(MyLepton[1].type == "muon")
+        {
+            if(MyLepton[1].pat_particle.charge() > 0)
+            {
+                 posMu = MyLepton[1].pat_particle;
+                isPosMu = true;
+            }
+            else if(MyLepton[1].pat_particle.charge() < 0)
+            {
+                negMu = MyLepton[1].pat_particle;
+                isNegMu = true;
+            }
+        }
+        else if(MyLepton[0].type == "electron")
+        {
+            if(MyLepton[0].pat_particle.charge() > 0)
+            {
+                posEl = MyLepton[0].pat_particle;
+                isPosEl = true;
+            }
+            else if(MyLepton[0].pat_particle.charge() < 0)
+            {
+                negEl = MyLepton[0].pat_particle;
+                isNegEl = true;
+            }
+        }
+        else if(MyLepton[1].type == "electron")
+        {
+            if(MyLepton[1].pat_particle.charge() > 0)
+            {
+                posEl = MyLepton[1].pat_particle;
+                isPosEl = true;
+            }
+            else if(MyLepton[1].pat_particle.charge() < 0)
+            {
+                negEl = MyLepton[1].pat_particle;
+                isNegEl = true;
+            }
+        }
+    }
+    else
+    {
+        return;
+    }
+    int i=0;
+    for(vector<MyLepton>::const_iterator lep_it = MyLeptons.begin(); lep_it != MyLeptons.end(); ++lep_it)
+    {
+
+        cout << i <<" flavor: " << lep_it->type << "pt: " << lep_it->pat_particle.pt() <<endl;
+        i += 1;
+//        if(lep_it->type == "muon")
+//        {
+//            if(lep_it->pat_particle.charge() > 0)
+//            {
+//                 posMu = lep_it->pat_particle;
+//                isPosMu = true;
+//            }
+//            else if(lep_it->pat_particle.charge() < 0)
+//            {
+//                negMu = lep_it->pat_particle;
+//                isNegMu = true;
+//            }
+//        }
+//        else if(lep_it->type == "electron")
+//        {
+//            if(lep_it->pat_particle.charge() > 0)
+//            {
+//                posEl = lep_it->pat_particle;
+//                isPosEl = true;
+//            }
+//            else if(lep_it->pat_particle.charge() < 0)
+//            {
+//                negEl = lep_it->pat_particle;
+//                isNegEl = true;
+//            }
+//        }
+    }
     //After Lepton Selection
     if(isPosMu && isNegMu) isDiMuon = true;
     if(isPosEl && isNegEl) isDiElectron = true;
