@@ -21,8 +21,8 @@ TtAMWTSolver::TtAMWTSolver(bool isData, const double b, const double e, const do
     e_com(13000)
 
 {
-    if (isData) nbrJetSmear = 500;
-    else nbrJetSmear = 500;
+    if (isData) nbrJetSmear = 1000;
+    else nbrJetSmear = 1000;
 //    cout << "Number of iterations: " << nbrJetSmear<<endl;
 
     //PDF Initialization
@@ -80,57 +80,83 @@ TtAMWTSolver::NeutrinoSolution TtAMWTSolver::NuSolver(const TLorentzVector &LV_l
 
     met_sh.Set(pxmiss_,pymiss_);
     vector<TLorentzVector> jets_by_pt_sh;
-    jets_by_pt_sh.push_back(LV_b);
-    jets_by_pt_sh.push_back(LV_b_);
+    for (int n_bjet_dummy =0; n_bjet_dummy < 2; ++n_bjet_dummy)
+    {
+//        cout << "pre " <<n_bjet_dummy << endl;
+
+        if(n_bjet_dummy == 0)
+        {
+            jets_by_pt_sh.push_back(LV_b);
+            jets_by_pt_sh.push_back(LV_b_);
+//            cout << "1 " <<n_bjet_dummy << endl;
+        }
+        else if (n_bjet_dummy == 1)
+        {
+            jets_by_pt_sh.push_back(LV_b_);
+            jets_by_pt_sh.push_back(LV_b);
+//            cout << "2 " <<n_bjet_dummy << endl;
+
+        }
 
 
-    //Smearing the JET and MET
-    TVector2 met_sm;
-    vector <TLorentzVector> jets_by_pt_sm;
-    for (int iSM_JMT = 0; iSM_JMT < nbrJetSmear; iSM_JMT++){
 
 
-        if (nbrJetSmear == 1) dont_smear_JetMET(jets_by_pt_sh, met_sh, jets_by_pt_sm, met_sm);
-        else smear_JetMET(jets_by_pt_sh, met_sh, jets_by_pt_sm, met_sm, rand3, (LV_l + LV_l_));
+
+        TVector2 met_sm;
+        vector <TLorentzVector> jets_by_pt_sm;
+        for (int iSM_JMT = 0; iSM_JMT < nbrJetSmear; iSM_JMT++)
+        {
+
+
+            if (nbrJetSmear == 1) dont_smear_JetMET(jets_by_pt_sh, met_sh, jets_by_pt_sm, met_sm);
+            else smear_JetMET(jets_by_pt_sh, met_sh, jets_by_pt_sm, met_sm, rand3, (LV_l + LV_l_));
 //        jet_energy_scale_factor.push_back(jets_by_pt_sm.at(0).Pt());
 //        cout << jets_by_pt_sm.at(0).Pt() << endl;
-        h_etasm->Fill(jets_by_pt_sm.at(0).Eta());
-        h_ptsm->Fill(jets_by_pt_sm.at(0).Pt());
-        h_phism->Fill(jets_by_pt_sm.at(0).Phi());
-        h_SmearF->Fill(jets_by_pt_sm.at(0).Pt()/jets_by_pt_sh.at(0).Pt());
-        h_SmearFPhi->Fill(jets_by_pt_sm.at(0).Phi()/jets_by_pt_sh.at(0).Phi());
-        h_SmearFEta->Fill(jets_by_pt_sm.at(0).Eta()/jets_by_pt_sh.at(0).Eta());
-        h_Met->Fill(met_sh.X(),met_sm.X());
-        //loop on top mass parameter
-        double weightmaxdum = -1;
-        for(double mt = topmass_begin;
-            mt < topmass_end + 0.5*topmass_step;
-            mt += topmass_step) {
+            h_etasm->Fill(jets_by_pt_sm.at(0).Eta());
+            h_ptsm->Fill(jets_by_pt_sm.at(0).Pt());
+            h_phism->Fill(jets_by_pt_sm.at(0).Phi());
+            h_SmearF->Fill(jets_by_pt_sm.at(0).Pt()/jets_by_pt_sh.at(0).Pt());
+            h_SmearFPhi->Fill(jets_by_pt_sm.at(0).Phi()/jets_by_pt_sh.at(0).Phi());
+            h_SmearFEta->Fill(jets_by_pt_sm.at(0).Eta()/jets_by_pt_sh.at(0).Eta());
+            h_Met->Fill(met_sh.X(),met_sm.X());
+            //loop on top mass parameter
+            double weightmaxdum = -1;
+            double mt = 172.5;
+//            for(double mt = topmass_begin;
+//                    mt < topmass_end + 0.5*topmass_step;
+//                    mt += topmass_step)
+            //  {
             double q_coeff[5], q_sol[4];
             // FindCoeff(LV_l, LV_l_, LV_b, LV_b_, mt, mt, pxmiss_, pymiss_, q_coeff);
             FindCoeff(LV_l, LV_l_, jets_by_pt_sm[0], jets_by_pt_sm[1], mt, mt, met_sm.X(), met_sm.Y(), q_coeff);
             int NSol = quartic(q_coeff, q_sol);
 
             //loop on all solutions
-            for (int isol = 0; isol < NSol; isol++) {
+            for (int isol = 0; isol < NSol; isol++)
+            {
                 //TopRec(LV_l, LV_l_, LV_b, LV_b_, q_sol[isol]);
                 TopRec(LV_l, LV_l_, jets_by_pt_sm[0], jets_by_pt_sm[1], q_sol[isol]);
                 double weight = get_weight(jets_by_pt_sm[0],jets_by_pt_sm[1],LV_l,LV_l_,LV_n,LV_n_,mt);
 //		cout <<"weight of mt answer: " <<  weight << endl;
                 h_topMass->Fill(mt,weight);
-                if (weight > weightmaxdum) {
+                if (weight > weightmaxdum)
+                {
                     weightmaxdum =weight;
                     maxLV_n.SetPxPyPzE(LV_n.Px(), LV_n.Py(), LV_n.Pz(), LV_n.E());
                     maxLV_n_.SetPxPyPzE(LV_n_.Px(), LV_n_.Py(), LV_n_.Pz(), LV_n_.E());
                     weightmax = weightmaxdum;
                 }
             }
-        }
-    }//End of JetMet Smearing loop
+            //}
+        }//End of JetMet Smearing loop
+    }
     TtAMWTSolver::NeutrinoSolution nuSol;
     nuSol.neutrino    = reco::LeafCandidate(0, maxLV_n  );
     nuSol.neutrinoBar = reco::LeafCandidate(0, maxLV_n_ );
     nuSol.weight = weightmax;
+
+
+
     return nuSol;
 }
 
@@ -213,7 +239,7 @@ double TtAMWTSolver::get_dalitz_prob(const TLorentzVector & lep, const TLorentzV
     double mt2_mb2 = mt2 - mb2;
 
     return 4. * mte * ( mt2 - mb2 - 2. * mte ) /
-            ( mt2_mb2 * mt2_mb2 + mw2 * ( mt2 + mb2 ) - 2. * mw2 * mw2 );
+           ( mt2_mb2 * mt2_mb2 + mw2 * ( mt2 + mb2 ) - 2. * mw2 * mw2 );
 }
 
 double TtAMWTSolver::get_2bjet_prob(const TLorentzVector & jet1, const TLorentzVector & jet2,
@@ -230,7 +256,8 @@ double TtAMWTSolver::get_2bjet_prob(const TLorentzVector & jet1, const TLorentzV
 double TtAMWTSolver::get_top_pt_prob(const double pt) const
 {
 
-    double prob_array[120] = {
+    double prob_array[120] =
+    {
         0.00200245,	 0.0060801,	0.00999056,	0.013597,	0.0170136,	0.0203661,	0.0231052,	0.0259027,	0.0279369,	0.0299741,
         0.0313266,	 0.0328515,	0.0333733,	0.0339433,	0.0341794,	0.0340638,	0.0339737,	0.0336051,	0.0332196,	0.0317563,
         0.0308568,	 0.0299114,	0.028731,	0.0275211,	0.0260246,	0.0246938,	0.0234093,	0.022064,	0.0207067,	0.0193499,
@@ -261,7 +288,8 @@ double TtAMWTSolver::get_top_pt_prob(const double pt) const
 
 void TtAMWTSolver::smear_JetMET(const vector <TLorentzVector> & orig_jets, const TVector2 & orig_met,
                                 vector <TLorentzVector> & smear_jets, TVector2 & smear_met,
-                                TRandom3* rand3,  const TLorentzVector & lep_sum) const{
+                                TRandom3* rand3,  const TLorentzVector & lep_sum) const
+{
 
     smear_jets.clear();
 
@@ -276,24 +304,25 @@ void TtAMWTSolver::smear_JetMET(const vector <TLorentzVector> & orig_jets, const
     TLorentzVector v_temp;
     std::mt19937_64 m_random_generator(21213232546);
     // Seed with a real random value, if available
-        std::random_device r;
+    std::random_device r;
 
-        // Choose a random mean between 1 and 6
+    // Choose a random mean between 1 and 6
 //        std::default_random_engine e1(r());
 //        std::uniform_int_distribution<int> uniform_dist(1, 6);
 //        int mean = uniform_dist(e1);
 //        std::cout << "Randomly-chosen mean: " << mean << '\n';
 
-        // Generate a normal distribution around that mean
-        std::seed_seq seed2{r(), r(), r(), r(), r(), r(), r(), r()};
-        std::mt19937 e2(seed2);
+    // Generate a normal distribution around that mean
+    std::seed_seq seed2{r(), r(), r(), r(), r(), r(), r(), r()};
+    std::mt19937 e2(seed2);
 //        std::normal_distribution<> normal_dist(mean, 2);
 
 
 
     double smearFactorPt = 1.;
     double smearFactorPhi = 1.;
-    for (unsigned int sui = 0; sui < orig_jets.size(); sui++){
+    for (unsigned int sui = 0; sui < orig_jets.size(); sui++)
+    {
 
         JME::JetParameters par;
         par.setJetEta(orig_jets.at(sui).Eta());
@@ -316,7 +345,7 @@ void TtAMWTSolver::smear_JetMET(const vector <TLorentzVector> & orig_jets, const
         Phi_sm = orig_jets.at(sui).Phi()*smearFactorPhi;
         //        cout <<"Jet "<< smearFactor<<" " << Pt_sm<<" " << Eta_sm<<" " << Phi_sm << endl;
         v_temp.SetPtEtaPhiE(Pt_sm, Eta_sm, Phi_sm, orig_jets.at(sui).E());
-	    //v_temp = orig_jets[sui]*smearFactorPt;
+        //v_temp = orig_jets[sui]*smearFactorPt;
         sum_jpx += orig_jets.at(sui).Px();
         sum_jpy += orig_jets.at(sui).Py();
 
@@ -333,13 +362,14 @@ void TtAMWTSolver::smear_JetMET(const vector <TLorentzVector> & orig_jets, const
 //    h_SmearF->Fill(jet_energy_scale_factor[1]);
 
     //10% resolution
-    std::normal_distribution<> t(0, 0.1);
+    std::normal_distribution<> t(0, 0.10);
     double MetSmear = t(e2);
     double unclust_metx_sm = unclust_metx * (1 + MetSmear );
     double unclust_mety_sm = unclust_mety * (1 + MetSmear );
 //    cout << unclust_metx_sm<<"Met " << unclust_mety_sm << endl;
 
     smear_met.Set(orig_met.Px() + sum_jpx - unclust_metx - sum_jpx_sm + unclust_metx_sm, orig_met.Py() + sum_jpy - unclust_mety - sum_jpy_sm + unclust_mety_sm);
+//smear_met.Set(unclust_metx_sm -sum_jpx + sum_jpx_sm, unclust_mety_sm - sum_jpy + sum_jpy_sm);
 }
 
 void TtAMWTSolver::dont_smear_JetMET(const vector <TLorentzVector> & orig_jets,
@@ -497,12 +527,14 @@ int TtAMWTSolver::quartic(double *koeficienty, double *koreny) const
     int nreal = 0;
     px = koreny;
     t = sqrt(0.25*sqr(z) - b0);
-    for(int i=-1; i<=1; i+=2) {
+    for(int i=-1; i<=1; i+=2)
+    {
         d0 = -0.5*z + i*t;
         /* coeffs. of quadratic factor */
         d1 = (t!=0.0)? -i*0.5*b1/t : i*sqrt(-z - b2);
         h = 0.25*sqr(d1) - d0;
-        if (h>=0.0) {
+        if (h>=0.0)
+        {
             h = sqrt(h);
             nreal += 2;
             *px++ = -0.5*d1 - h - w;
@@ -526,14 +558,16 @@ int TtAMWTSolver::cubic(const double *coeffs, double *koreny) const
     unsigned nreal;
     double w, p, q, dis, h, phi;
 
-    if (coeffs[3]!=0.0) {
+    if (coeffs[3]!=0.0)
+    {
         /* cubic problem? */
         w = coeffs[2]/(3*coeffs[3]);
         p = sqr(coeffs[1]/(3*coeffs[3])-sqr(w))*(coeffs[1]/(3*coeffs[3])-sqr(w));
         q = -0.5*(2*sqr(w)*w-(coeffs[1]*w-coeffs[0])/coeffs[3]);
         dis = sqr(q)+p;
         /* discriminant */
-        if (dis<0.0) {
+        if (dis<0.0)
+        {
             /* 3 real solutions */
             h = q/sqrt(-p);
             if (h>1.0) h = 1.0;
@@ -550,7 +584,8 @@ int TtAMWTSolver::cubic(const double *coeffs, double *koreny) const
             if (koreny[1]<koreny[0]) SWAP(koreny[0], koreny[1]);
             nreal = 3;
         }
-        else {
+        else
+        {
             /* only one real solution */
             dis = sqrt(dis);
             h = TMath::Power(fabs(q+dis), 1.0/3.0);
@@ -561,18 +596,21 @@ int TtAMWTSolver::cubic(const double *coeffs, double *koreny) const
 
         /* Perform one step of a Newton iteration in order to minimize
          round-off errors */
-        for(unsigned i=0; i<nreal; i++) {
+        for(unsigned i=0; i<nreal; i++)
+        {
             h = coeffs[1] + koreny[i] * (2 * coeffs[2] + 3 * koreny[i] * coeffs[3]);
             if (h != 0.0)
                 koreny[i] -= (coeffs[0] + koreny[i] * (coeffs[1] + koreny[i] * (coeffs[2] + koreny[i] * coeffs[3])))/h;
         }
     }
 
-    else if (coeffs[2]!=0.0) {
+    else if (coeffs[2]!=0.0)
+    {
         /* quadratic problem? */
         p = 0.5*coeffs[1]/coeffs[2];
         dis = sqr(p) - coeffs[0]/coeffs[2];
-        if (dis>=0.0) {
+        if (dis>=0.0)
+        {
             /* two real solutions */
             dis = sqrt(dis);
             koreny[0] = -p - dis;
@@ -584,7 +622,8 @@ int TtAMWTSolver::cubic(const double *coeffs, double *koreny) const
             nreal = 0;
     }
 
-    else if (coeffs[1]!=0.0) {
+    else if (coeffs[1]!=0.0)
+    {
         /* linear problem? */
         koreny[0] = -coeffs[0]/coeffs[1];
         nreal = 1;
@@ -599,7 +638,8 @@ int TtAMWTSolver::cubic(const double *coeffs, double *koreny) const
 
 void TtAMWTSolver::SWAP(double &realone, double &realtwo) const
 {
-    if (realtwo < realone) {
+    if (realtwo < realone)
+    {
         double aux = realtwo;
         realtwo = realone;
         realone = aux;

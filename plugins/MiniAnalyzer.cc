@@ -63,7 +63,7 @@
 #include "MSETools.h"
 #include "DataFormats/Common/interface/ValueMap.h"
 #include "DataFormats/PatCandidates/interface/VIDCutFlowResult.h"
-
+#include "AnalysisDataFormats/TopObjects/interface/TtGenEvent.h"
 
 
 #include "DileptonAnalyticalSolver.h"
@@ -101,6 +101,7 @@ private:
     virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
     virtual void endJob() override;
     bool isMediumMuon(const reco::Muon & recoMu);
+    double SF( double x);
 
 
     // ----------member data ---------------------------
@@ -199,6 +200,10 @@ private:
     TH1F* h_AMS_mLepNoVetoMuMu;
     TH1F* h_AMS_mLepNoVetoElEl;
     TH1F* h_AMS_mLepNoVetoElMu;
+    TH1F* h_ATS_mLepNoVetoMuMu;
+    TH1F* h_ATS_mLepNoVetoElEl;
+    TH1F* h_ATS_mLepNoVetoElMu;
+    TH1F* h_ATS_mLepNoVetoDiLep;
 
     TH1F* h_ABS_METMuMu;
     TH1F* h_ABS_METElEl;
@@ -367,6 +372,19 @@ private:
     TH1F* h_NinElEl_NoMET_AoneBS;
     TH1F* h_NoutElEl_NoMET_AoneBS;
 
+    TH1F* h_NinMuMu_ATS;
+    TH1F* h_NoutMuMu_ATS;
+    TH1F* h_NinElMu_ATS;
+    TH1F* h_NoutElMu_ATS;
+    TH1F* h_NinElEl_ATS;
+    TH1F* h_NoutElEl_ATS;
+    TH1F* h_NinMuMu_NoMET_ATS;
+    TH1F* h_NoutMuMu_NoMET_ATS;
+    TH1F* h_NinElMu_NoMET_ATS;
+    TH1F* h_NoutElMu_NoMET_ATS;
+    TH1F* h_NinElEl_NoMET_ATS;
+    TH1F* h_NoutElEl_NoMET_ATS;
+
     double coriso= 9999; // initialise to dummy value
     double coriso2= 9999; // initialise to dummy value
 
@@ -455,6 +473,30 @@ private:
     string mm_sf;
     TFile* f_mm_sf;
 
+    vector<double> t_cos;
+
+    vector<LorentzVector> t_Leptons;
+    vector<LorentzVector> t_bJets;
+    vector<LorentzVector> t_top;
+    vector<LorentzVector> t_antitop;
+    vector<LorentzVector> t_W;
+    vector<LorentzVector> t_antiW;
+    vector<LorentzVector> t_nu;
+    vector<LorentzVector> t_antinu;
+    int t_Run;
+    int t_Event;
+    int t_bunch;
+    int t_lumi;
+    double w_bjet;
+    double w_posEl;
+    double w_negEl;
+    double w_posMu;
+    double w_negMu;
+    double w_ee;
+    double w_em;
+    double w_mm;
+    double w_top;
+    double w_mc;
 
 };
 
@@ -548,7 +590,11 @@ MiniAnalyzer::~MiniAnalyzer()
 {
     delete f_outFile;
 }
-
+double MiniAnalyzer::SF(double x)
+{
+    double SF = exp(0.0615 + (-0.0005)*x);
+    return SF;
+}
 void
 MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
@@ -556,7 +602,10 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
     using namespace edm;
 
-
+    t_Run   = iEvent.id().run();
+    t_Event = iEvent.id().event();
+    t_lumi  = iEvent.luminosityBlock();
+    t_bunch = iEvent.bunchCrossing();
 
     /////////////FILLINGINPUTS/////////////////////
     edm::Handle<reco::VertexCollection> vertices;
@@ -615,8 +664,27 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     SF_negMu = 1;
     SF_posEl = 1;
     SF_negEl = 1;
+    w_bjet = 1;
+    w_posEl = 1;
+    w_negEl = 1;
+    w_posMu = 1;
+    w_negMu = 1;
+    w_ee = 1;
+    w_em = 1;
+    w_mm = 1;
+    w_top = 1;
+    w_mc = 1;
 
-
+    ////Tree variables
+    t_antinu.clear();
+    t_nu.clear();
+    t_antitop.clear();
+    t_top.clear();
+    t_antiW.clear();
+    t_W.clear();
+    t_bJets.clear();
+    t_cos.clear();
+    t_Leptons.clear();
     /////////////////////0b HLT trigger/////////////////////
     edm::Handle<edm::TriggerResults> trigResults; //our trigger result object
 
@@ -845,6 +913,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         //if(!isPythia) theWeight *= lhEvtInfo->weights()[whichWeight].wgt/lhEvtInfo->originalXWGTUP();
 
     }
+    w_mc = theWeight;
     ////////////0a total number of events /////////////////
     h_Nevents->Fill(1);
     h_Nevents_weighted->Fill(1,theWeight);
@@ -947,13 +1016,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     h_Nevents_AT->Fill(1,theWeight);;
 
     /////////////////////0c Event Filters //////////////////
-// count how many good vertices we have
-    nGoodVtxs = 0;
-    for (VertexCollection::const_iterator vtx = vertices->begin(); vtx != vertices->end(); ++vtx)
-    {
-        if ( !(vtx->isFake()) && vtx->ndof() >= 4. && vtx->position().Rho() <= 2.0 && fabs(vtx->position().Z()) <= 24.) nGoodVtxs++;
-    }
-    h_NPV->Fill(nGoodVtxs,theWeight);
+
 
     ///Vertex Filter
 //    if (vertices->empty()) return;
@@ -975,7 +1038,13 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         }
     }
     if (PV==vertices->end()) return;
-
+// count how many good vertices we have
+    nGoodVtxs = 0;
+    for (VertexCollection::const_iterator vtx = vertices->begin(); vtx != vertices->end(); ++vtx)
+    {
+        if ( !(vtx->isFake()) && vtx->ndof() >= 4. && vtx->position().Rho() <= 2.0 && fabs(vtx->position().Z()) <= 24.) nGoodVtxs++;
+    }
+    h_NPV->Fill(nGoodVtxs,theWeight);
 
 
 
@@ -1331,12 +1400,15 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                 {
                     posMu = MyLeptons[0].pat_particle;
                     isPosMu = true;
+                    t_Leptons.push_back(posMu.p4());
                     // cout << posMu.pt() << endl;
                 }
                 else if(MyLeptons[0].pat_particle.charge() < 0)
                 {
                     negMu = MyLeptons[0].pat_particle;
                     isNegMu = true;
+                    t_Leptons.push_back(negMu.p4());
+
                     //cout << negMu.pt() << endl;
                 }
             }
@@ -1346,6 +1418,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                 {
                     posMu = MyLeptons[1].pat_particle;
                     //cout << posMu.pt() << endl;
+                    t_Leptons.push_back(posMu.p4());
 
                     isPosMu = true;
                 }
@@ -1353,6 +1426,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                 {
                     negMu = MyLeptons[1].pat_particle;
                     //cout << negMu.pt() << endl;
+                    t_Leptons.push_back(negMu.p4());
 
                     isNegMu = true;
                 }
@@ -1363,11 +1437,15 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                 {
                     posEl = MyLeptons[0].pat_particle;
                     isPosEl = true;
+                    t_Leptons.push_back(posEl.p4());
+
                 }
                 else if(MyLeptons[0].pat_particle.charge() < 0)
                 {
                     negEl = MyLeptons[0].pat_particle;
                     isNegEl = true;
+                    t_Leptons.push_back(negEl.p4());
+
                 }
             }
             if(MyLeptons[1].type == "electron")
@@ -1376,11 +1454,13 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                 {
                     posEl = MyLeptons[1].pat_particle;
                     isPosEl = true;
+                    t_Leptons.push_back(posEl.p4());
                 }
                 else if(MyLeptons[1].pat_particle.charge() < 0)
                 {
                     negEl = MyLeptons[1].pat_particle;
                     isNegEl = true;
+                    t_Leptons.push_back(negEl.p4());
                 }
             }
         }
@@ -1442,169 +1522,6 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     if(isDiMuon || isDiElectron || isElMu ) isDiLeptonic = true;
     if(!isDiLeptonic)return;
     //    //++n_afterDiLepton;
-    if(DiMu)
-    {
-        if(!isDiMuon) return;
-        h_NeventsMuMu_ALS->Fill(1,theWeight);
-    }
-    if(DiEl)
-    {
-        if(!isDiElectron) return;
-        h_NeventsElEl_ALS->Fill(1,theWeight);
-    }
-    if(ElMu)
-    {
-        if(!isElMu && !isMuEl) return;
-        h_NeventsElMu_ALS->Fill(1,theWeight);
-    }
-
-    h_Nevents_ALS->Fill(1,theWeight);
-
-/////////////////////2 Z Mass Veto //////////////////////////////////
-    if(isDiMuon)
-    {
-        PosLep.SetPtEtaPhiM(posMu.pt(),posMu.eta(),posMu.phi(),posMu.mass());
-        NegLep.SetPtEtaPhiM(negMu.pt(),negMu.eta(),negMu.phi(),negMu.mass());
-        DiLep = PosLep + NegLep;
-        if(PosLep.Pt() > NegLep.Pt())
-        {
-            if(PosLep.Pt() < 25 ) return;
-        }
-        else
-        {
-            if(NegLep.Pt() < 25 ) return;
-        }
-        if(DiLep.M() < 20) return;
-        h_Nevents_DiMu->Fill(1,theWeight);;
-        h_ALS_mLepNoVetoMuMu->Fill(DiLep.M(),theWeight);
-        if((DiLep.M() < 106 && DiLep.M() > 76))
-        {
-            h_NinMuMu_ALS->Fill(1,theWeight);
-
-        }
-        if(!(DiLep.M() < 106 && DiLep.M() > 76))
-        {
-            h_NoutMuMu_ALS->Fill(1,theWeight);;
-
-            h_ALS_etaLMuMu->Fill(posMu.eta(),theWeight);
-            h_ALS_etaLMuMu->Fill(negMu.eta(),theWeight);
-            h_ALS_ptLMuMu->Fill(posMu.pt(),theWeight);
-            h_ALS_ptLMuMu->Fill(negMu.pt(),theWeight);
-
-            h_ALS_etaLDiLep->Fill(posMu.eta(),theWeight);
-            h_ALS_etaLDiLep->Fill(negMu.eta(),theWeight);
-            h_ALS_ptLDiLep->Fill(posMu.pt(),theWeight);
-            h_ALS_ptLDiLep->Fill(negMu.pt(),theWeight);
-        }
-
-    }
-    if(isDiElectron)
-    {
-        PosLep.SetPtEtaPhiM(posEl.pt(),posEl.eta(),posEl.phi(),posEl.mass());
-        NegLep.SetPtEtaPhiM(negEl.pt(),negEl.eta(),negEl.phi(),negEl.mass());
-        DiLep = PosLep + NegLep;
-        if(PosLep.Pt() > NegLep.Pt())
-        {
-            if(PosLep.Pt() < 25 ) return;
-        }
-        else
-        {
-            if(NegLep.Pt() < 25 ) return;
-        }
-        if(DiLep.M() < 20) return;
-        h_Nevents_DiEl->Fill(1,theWeight);;
-        h_ALS_mLepNoVetoElEl->Fill(DiLep.M(),theWeight);
-
-        if((DiLep.M() < 106 && DiLep.M() > 76))
-        {
-            h_NinElEl_ALS->Fill(1,theWeight);
-
-
-        }
-        if(!(DiLep.M() < 106 && DiLep.M() > 76))
-        {
-            h_NoutElEl_ALS->Fill(1,theWeight);;
-
-            h_ALS_etaLElEl->Fill(posEl.eta(),theWeight);
-            h_ALS_etaLElEl->Fill(negEl.eta(),theWeight);
-            h_ALS_ptLElEl->Fill(posEl.pt(),theWeight);
-            h_ALS_ptLElEl->Fill(negEl.pt(),theWeight);
-
-            h_ALS_etaLDiLep->Fill(posEl.eta(),theWeight);
-            h_ALS_etaLDiLep->Fill(negEl.eta(),theWeight);
-            h_ALS_ptLDiLep->Fill(posEl.pt(),theWeight);
-            h_ALS_ptLDiLep->Fill(negEl.pt(),theWeight);
-        }
-
-    }
-    if(isElMu)
-    {
-        PosLep.SetPtEtaPhiM(posEl.pt(),posEl.eta(),posEl.phi(),posEl.mass());
-        NegLep.SetPtEtaPhiM(negMu.pt(),negMu.eta(),negMu.phi(),negMu.mass());
-        DiLep = PosLep + NegLep;
-        if(PosLep.Pt() > NegLep.Pt())
-        {
-            if(PosLep.Pt() < 25 ) return;
-        }
-        else
-        {
-            if(NegLep.Pt() < 25 ) return;
-        }
-        if(DiLep.M() < 20) return;
-        h_Nevents_ElMu->Fill(1,theWeight);;
-        if((DiLep.M() < 106 && DiLep.M() > 76))
-        {
-            h_NinElMu_ALS->Fill(1,theWeight);;
-
-
-        }
-        //        if((DiLep.M() < 106 && DiLep.M() > 76)) return;
-        h_ALS_mLepNoVetoElMu->Fill(DiLep.M(),theWeight);
-        h_ALS_etaLElMu->Fill(posEl.eta(),theWeight);
-        h_ALS_etaLElMu->Fill(negMu.eta(),theWeight);
-        h_ALS_ptLElMu->Fill(posEl.pt(),theWeight);
-        h_ALS_ptLElMu->Fill(negMu.pt(),theWeight);
-
-        h_ALS_etaLDiLep->Fill(posEl.eta(),theWeight);
-        h_ALS_etaLDiLep->Fill(negMu.eta(),theWeight);
-        h_ALS_ptLDiLep->Fill(posEl.pt(),theWeight);
-        h_ALS_ptLDiLep->Fill(negMu.pt(),theWeight);
-
-    }
-    if(isMuEl)
-    {
-        PosLep.SetPtEtaPhiM(posMu.pt(),posMu.eta(),posMu.phi(),posMu.mass());
-        NegLep.SetPtEtaPhiM(negEl.pt(),negEl.eta(),negEl.phi(),negEl.mass());
-        DiLep = PosLep + NegLep;
-        if(PosLep.Pt() > NegLep.Pt())
-        {
-            if(PosLep.Pt() < 25 ) return;
-        }
-        else
-        {
-            if(NegLep.Pt() < 25 ) return;
-        }
-        if(DiLep.M() < 20) return;
-        h_Nevents_ElMu->Fill(1,theWeight);;
-
-        if((DiLep.M() < 106 && DiLep.M() > 76))
-        {
-            h_NinElMu_ALS->Fill(1,theWeight);;
-        }
-        //        if((DiLep.M() < 106 && DiLep.M() > 76)) return;
-        h_ALS_mLepNoVetoElMu->Fill(DiLep.M(),theWeight);
-
-        h_ALS_etaLElMu->Fill(posMu.eta(),theWeight);
-        h_ALS_etaLElMu->Fill(negEl.eta(),theWeight);
-        h_ALS_ptLElMu->Fill(posMu.pt(),theWeight);
-        h_ALS_ptLElMu->Fill(negEl.pt(),theWeight);
-
-        h_ALS_etaLDiLep->Fill(posMu.eta(),theWeight);
-        h_ALS_etaLDiLep->Fill(negEl.eta(),theWeight);
-        h_ALS_ptLDiLep->Fill(posMu.pt(),theWeight);
-        h_ALS_ptLDiLep->Fill(negEl.pt(),theWeight);
-
-    }
 
 
     ///////////////////JETS//////////////////////////////
@@ -1671,6 +1588,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         njets.push_back(*jet_it);
         if( !(jet_it->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") > 0.8484  )) continue;          //0.5426 is loose working point for btaging new value is 0.605
         bjets.push_back(*jet_it);
+        t_bJets.push_back(jet_it->p4());
 
     }
 
@@ -1689,6 +1607,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                                             bjet_it->pt()
                                         );
             //cout <<"btag: "<< jet_scalefactor << endl;
+            w_bjet = w_bjet*jet_scalefactor;
             theWeight = theWeight*jet_scalefactor;
             ++count;
 
@@ -1707,6 +1626,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
             //cout <<"pt: "<< posEl.pt() << " eta: " << posEl.superCluster()->eta() <<" SF: "<< h2D_egammaSF->GetBinContent(binx,biny)<<" & "<< h2D_egammaTkSF->GetBinContent(binx2,biny2) <<endl;
             SF_posEl = h2D_egammaSF->GetBinContent(binx,biny)*h2D_egammaTkSF->GetBinContent(binx2,biny2);
+            w_posEl = w_posEl*SF_posEl;
             theWeight = theWeight*SF_posEl;
 
         }
@@ -1718,6 +1638,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             Int_t biny2 = 1;
             //            (negEl.pt() < 26) ? ( biny2 = h2D_egammaTkSF->GetYaxis()->FindBin(50)) : ( biny2 = h2D_egammaTkSF->GetYaxis()->FindBin(negEl.pt()) );
             SF_negEl = h2D_egammaSF->GetBinContent(binx,biny)*h2D_egammaTkSF->GetBinContent(binx2,biny2);
+            w_negEl = w_negEl*SF_negEl;
             theWeight = theWeight*SF_negEl;
 
         }
@@ -1737,6 +1658,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             Double_t TkSF = g_muonTkSF->Eval(fabs(posMu.eta()));
             //cout <<"Mupt: "<< posMu.pt() << " eta: " << fabs(posMu.eta()) <<" SF: "<< h2D_muonIDSF->GetBinContent(binx,biny)<<"& "<< h2D_muonISOSF->GetBinContent(binx2,biny2) <<" & "<< TkSF <<endl;
             SF_posMu = h2D_muonIDSF->GetBinContent(binx,biny)*h2D_muonISOSF->GetBinContent(binx2,biny2)*TkSF;
+            w_posMu = w_posMu*SF_posMu;
             theWeight = theWeight*SF_posMu;
 
         }
@@ -1751,6 +1673,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             Double_t TkSF = g_muonTkSF->Eval(fabs(negMu.eta()));
             //cout <<"Mupt: "<< negMu.pt() << " eta: " << fabs(negMu.eta()) <<" SF: "<< h2D_muonIDSF->GetBinContent(binx,biny)<<"& "<< h2D_muonISOSF->GetBinContent(binx2,biny2)<< " & "<< TkSF <<endl;
             SF_negMu = h2D_muonIDSF->GetBinContent(binx,biny)*h2D_muonISOSF->GetBinContent(binx2,biny2)*TkSF;
+            w_negMu = w_negMu*SF_negMu;
             theWeight = theWeight*SF_negMu;
 
 
@@ -1765,6 +1688,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
             double d_ee_sf = h2D_ee_sf->GetBinContent(binx,biny);
 //            cout << posEl.eta() << " ee " << negEl.eta() << " sf " << d_ee_sf << endl;
+            w_ee = w_ee*d_ee_sf;
             theWeight = theWeight*d_ee_sf;
         }
         if(ElMu)
@@ -1774,16 +1698,17 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             Int_t biny = 0;
             if(isElMu)
             {
-                 binx = h2D_em_sf->GetXaxis()->FindBin(fabs(posEl.eta()));
-                 biny = h2D_em_sf->GetYaxis()->FindBin(fabs(negMu.eta()));
+                binx = h2D_em_sf->GetXaxis()->FindBin(fabs(posEl.eta()));
+                biny = h2D_em_sf->GetYaxis()->FindBin(fabs(negMu.eta()));
             }
             if(isMuEl)
             {
-                 binx = h2D_em_sf->GetXaxis()->FindBin(fabs(posMu.eta()));
-                 biny = h2D_em_sf->GetYaxis()->FindBin(fabs(negEl.eta()));
+                binx = h2D_em_sf->GetXaxis()->FindBin(fabs(posMu.eta()));
+                biny = h2D_em_sf->GetYaxis()->FindBin(fabs(negEl.eta()));
             }
             double d_em_sf = h2D_em_sf->GetBinContent(binx,biny);
 //            cout << d_em_sf << " em " << endl;
+            w_em = w_em*d_em_sf;
             theWeight = theWeight*d_em_sf;
         }
         if(DiMu)
@@ -1794,16 +1719,201 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             Int_t biny = h2D_mm_sf->GetYaxis()->FindBin(fabs(negMu.eta()));
 
             double d_mm_sf = h2D_mm_sf->GetBinContent(binx,biny);
-           // cout << posMu.eta() << " ee " << negMu.eta() << " sf " << d_mm_sf << endl;
-
+            // cout << posMu.eta() << " ee " << negMu.eta() << " sf " << d_mm_sf << endl;
+            w_mm = w_mm * d_mm_sf;
             theWeight = theWeight*d_mm_sf;
         }
+//            if(genEvent->isFullLeptonic(true))
+//            {
+//
+//            cout << "why not here!" << endl;
+//            if(genEvent->leptonicDecayTop(true) != NULL && genEvent->hadronicDecayTop(true) != NULL)
+//            {
+//
+//            cout << genEvent->leptonicDecayTop(true)->pt()<< endl;
+//            cout <<  genEvent->hadronicDecayTop(true)->pt() << endl;
+//            double topPtLepTrue = genEvent->leptonicDecayTop(true)->pt();
+//            double topPtHadTrue = genEvent->hadronicDecayTop(true)->pt();
+//            cout << "So far we are here" << endl;
+//            double w = sqrt(SF(topPtLepTrue)*SF(topPtHadTrue));
+//            w_top = w_top*w;
+//            theWeight=theWeight*w;
+//            }
+//            }
+
     }
 
     h_Weight->Fill(theWeight);
 
 
 
+    if(DiMu)
+    {
+        if(!isDiMuon) return;
+        h_NeventsMuMu_ALS->Fill(1,theWeight);
+    }
+    if(DiEl)
+    {
+        if(!isDiElectron) return;
+        h_NeventsElEl_ALS->Fill(1,theWeight);
+    }
+    if(ElMu)
+    {
+        if(!isElMu && !isMuEl) return;
+        h_NeventsElMu_ALS->Fill(1,theWeight);
+    }
+
+    h_Nevents_ALS->Fill(1,theWeight);
+
+/////////////////////2 Z Mass Veto //////////////////////////////////
+    if(isDiMuon)
+    {
+        double w_ALS = w_posMu*w_negMu*w_mc*w_mm;
+        PosLep.SetPtEtaPhiM(posMu.pt(),posMu.eta(),posMu.phi(),posMu.mass());
+        NegLep.SetPtEtaPhiM(negMu.pt(),negMu.eta(),negMu.phi(),negMu.mass());
+        DiLep = PosLep + NegLep;
+        if(PosLep.Pt() > NegLep.Pt())
+        {
+            if(PosLep.Pt() < 25 ) return;
+        }
+        else
+        {
+            if(NegLep.Pt() < 25 ) return;
+        }
+        if(DiLep.M() < 20) return;
+        h_Nevents_DiMu->Fill(1,w_ALS);;
+        h_ALS_mLepNoVetoMuMu->Fill(DiLep.M(),w_ALS);
+        if((DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NinMuMu_ALS->Fill(1,w_ALS);
+
+        }
+        if(!(DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NoutMuMu_ALS->Fill(1,w_ALS);;
+
+            h_ALS_etaLMuMu->Fill(posMu.eta(),w_ALS);
+            h_ALS_etaLMuMu->Fill(negMu.eta(),w_ALS);
+            h_ALS_ptLMuMu->Fill(posMu.pt(),w_ALS);
+            h_ALS_ptLMuMu->Fill(negMu.pt(),w_ALS);
+
+            h_ALS_etaLDiLep->Fill(posMu.eta(),w_ALS);
+            h_ALS_etaLDiLep->Fill(negMu.eta(),w_ALS);
+            h_ALS_ptLDiLep->Fill(posMu.pt(),w_ALS);
+            h_ALS_ptLDiLep->Fill(negMu.pt(),w_ALS);
+        }
+
+    }
+    if(isDiElectron)
+    {
+        double w_ALS = w_posEl*w_negEl*w_mc*w_ee;
+        PosLep.SetPtEtaPhiM(posEl.pt(),posEl.eta(),posEl.phi(),posEl.mass());
+        NegLep.SetPtEtaPhiM(negEl.pt(),negEl.eta(),negEl.phi(),negEl.mass());
+        DiLep = PosLep + NegLep;
+        if(PosLep.Pt() > NegLep.Pt())
+        {
+            if(PosLep.Pt() < 25 ) return;
+        }
+        else
+        {
+            if(NegLep.Pt() < 25 ) return;
+        }
+        if(DiLep.M() < 20) return;
+        h_Nevents_DiEl->Fill(1,w_ALS);;
+        h_ALS_mLepNoVetoElEl->Fill(DiLep.M(),w_ALS);
+
+        if((DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NinElEl_ALS->Fill(1,w_ALS);
+
+
+        }
+        if(!(DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NoutElEl_ALS->Fill(1,w_ALS);;
+
+            h_ALS_etaLElEl->Fill(posEl.eta(),w_ALS);
+            h_ALS_etaLElEl->Fill(negEl.eta(),w_ALS);
+            h_ALS_ptLElEl->Fill(posEl.pt(),w_ALS);
+            h_ALS_ptLElEl->Fill(negEl.pt(),w_ALS);
+
+            h_ALS_etaLDiLep->Fill(posEl.eta(),w_ALS);
+            h_ALS_etaLDiLep->Fill(negEl.eta(),w_ALS);
+            h_ALS_ptLDiLep->Fill(posEl.pt(),w_ALS);
+            h_ALS_ptLDiLep->Fill(negEl.pt(),w_ALS);
+        }
+
+    }
+    if(isElMu)
+    {
+        double w_ALS = w_posEl*w_negMu*w_mc*w_em;
+        PosLep.SetPtEtaPhiM(posEl.pt(),posEl.eta(),posEl.phi(),posEl.mass());
+        NegLep.SetPtEtaPhiM(negMu.pt(),negMu.eta(),negMu.phi(),negMu.mass());
+        DiLep = PosLep + NegLep;
+        if(PosLep.Pt() > NegLep.Pt())
+        {
+            if(PosLep.Pt() < 25 ) return;
+        }
+        else
+        {
+            if(NegLep.Pt() < 25 ) return;
+        }
+        if(DiLep.M() < 20) return;
+        h_Nevents_ElMu->Fill(1,w_ALS);;
+        if((DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NinElMu_ALS->Fill(1,w_ALS);;
+
+
+        }
+        //        if((DiLep.M() < 106 && DiLep.M() > 76)) return;
+        h_ALS_mLepNoVetoElMu->Fill(DiLep.M(),w_ALS);
+        h_ALS_etaLElMu->Fill(posEl.eta(),w_ALS);
+        h_ALS_etaLElMu->Fill(negMu.eta(),w_ALS);
+        h_ALS_ptLElMu->Fill(posEl.pt(),w_ALS);
+        h_ALS_ptLElMu->Fill(negMu.pt(),w_ALS);
+
+        h_ALS_etaLDiLep->Fill(posEl.eta(),w_ALS);
+        h_ALS_etaLDiLep->Fill(negMu.eta(),w_ALS);
+        h_ALS_ptLDiLep->Fill(posEl.pt(),w_ALS);
+        h_ALS_ptLDiLep->Fill(negMu.pt(),w_ALS);
+
+    }
+    if(isMuEl)
+    {
+        double w_ALS = w_posMu*w_negEl*w_mc*w_em;
+        PosLep.SetPtEtaPhiM(posMu.pt(),posMu.eta(),posMu.phi(),posMu.mass());
+        NegLep.SetPtEtaPhiM(negEl.pt(),negEl.eta(),negEl.phi(),negEl.mass());
+        DiLep = PosLep + NegLep;
+        if(PosLep.Pt() > NegLep.Pt())
+        {
+            if(PosLep.Pt() < 25 ) return;
+        }
+        else
+        {
+            if(NegLep.Pt() < 25 ) return;
+        }
+        if(DiLep.M() < 20) return;
+        h_Nevents_ElMu->Fill(1,w_ALS);;
+
+        if((DiLep.M() < 106 && DiLep.M() > 76))
+        {
+            h_NinElMu_ALS->Fill(1,w_ALS);;
+        }
+        //        if((DiLep.M() < 106 && DiLep.M() > 76)) return;
+        h_ALS_mLepNoVetoElMu->Fill(DiLep.M(),w_ALS);
+
+        h_ALS_etaLElMu->Fill(posMu.eta(),w_ALS);
+        h_ALS_etaLElMu->Fill(negEl.eta(),w_ALS);
+        h_ALS_ptLElMu->Fill(posMu.pt(),w_ALS);
+        h_ALS_ptLElMu->Fill(negEl.pt(),w_ALS);
+
+        h_ALS_etaLDiLep->Fill(posMu.eta(),w_ALS);
+        h_ALS_etaLDiLep->Fill(negEl.eta(),w_ALS);
+        h_ALS_ptLDiLep->Fill(posMu.pt(),w_ALS);
+        h_ALS_ptLDiLep->Fill(negEl.pt(),w_ALS);
+
+    }
 
     ////////////////3 Minimal Jet Multiplicity //////////////////
     if(njets.size() < 2) return;
@@ -1814,6 +1924,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     {
         if(isDiMuon)
         {
+
             h_AJS_mLepNoVetoMuMu->Fill(DiLep.M(),theWeight);
             if(bjets.size()>=1)h_AoneBS_mLepNoVetoMuMu->Fill(DiLep.M(),theWeight);;
 
@@ -1823,12 +1934,16 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
                 if(bjets.size()>=1)h_NinMuMu_NoMET_AoneBS->Fill(1,theWeight);;
                 if(bjets.size()>=2)h_NinMuMu_NoMET_ABS->Fill(1,theWeight);;
+                if(bjets.size()==2)h_NinMuMu_NoMET_ATS->Fill(1,theWeight);;
+
             }
             if(!(DiLep.M() < 106 && DiLep.M() > 76))
             {
                 h_NoutMuMu_AJS->Fill(1,theWeight);;
                 if(bjets.size()>=1)h_NoutMuMu_NoMET_AoneBS->Fill(1,theWeight);;
                 if(bjets.size()>=2)h_NoutMuMu_NoMET_ABS->Fill(1,theWeight);;
+                if(bjets.size()==2)h_NoutMuMu_NoMET_ATS->Fill(1,theWeight);;
+
 
                 h_NeventsMuMu_AJS->Fill(1,theWeight);
                 h_AJS_ptLepMuMu->Fill(posMu.pt(),theWeight);
@@ -1852,6 +1967,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
                 if(bjets.size()>=1)h_NinElEl_NoMET_AoneBS->Fill(1,theWeight);;
                 if(bjets.size()>=2)h_NinElEl_NoMET_ABS->Fill(1,theWeight);;
+                if(bjets.size()==2)h_NinElEl_NoMET_ATS->Fill(1,theWeight);;
+
 
             }
             if(!(DiLep.M() < 106 && DiLep.M() > 76))
@@ -1859,6 +1976,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                 h_NoutElEl_AJS->Fill(1,theWeight);;
                 if(bjets.size()>=1)h_NoutElEl_NoMET_AoneBS->Fill(1,theWeight);;
                 if(bjets.size()>=2)h_NoutElEl_NoMET_ABS->Fill(1,theWeight);;
+                if(bjets.size()==2)h_NoutElEl_NoMET_ATS->Fill(1,theWeight);;
+
 
                 h_NeventsElEl_AJS->Fill(1,theWeight);
                 h_AJS_ptLepElEl->Fill(posEl.pt(),theWeight);
@@ -1884,6 +2003,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
                 if(bjets.size()>=1)h_NinElMu_NoMET_AoneBS->Fill(1,theWeight);;
                 if(bjets.size()>=2)h_NinElMu_NoMET_ABS->Fill(1,theWeight);;
+                if(bjets.size()==2)h_NinElMu_NoMET_ATS->Fill(1,theWeight);;
+
 
             }
             h_NeventsElMu_AJS->Fill(1,theWeight);
@@ -1907,6 +2028,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
                 h_NinElMu_AJS->Fill(1,theWeight);;
                 if(bjets.size()>=1)h_NinElMu_NoMET_AoneBS->Fill(1,theWeight);;
                 if(bjets.size()>=2)h_NinElMu_NoMET_ABS->Fill(1,theWeight);;
+                if(bjets.size()==2)h_NinElMu_NoMET_ATS->Fill(1,theWeight);;
 
             }
             h_NeventsElMu_AJS->Fill(1,theWeight);
@@ -2028,18 +2150,22 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             //if(bjets.size() >= 1) h_ABS_mLepNoVetoMuMu->Fill(DiLep.M(),theWeight);
             if(bjets.size() >= 1) h_ABS_mLepNoVetoDiLep->Fill(DiLep.M(),theWeight);
             if(bjets.size() >= 2) h_ABS_mLepNoVetoMuMu->Fill(DiLep.M(),theWeight);
+            if(bjets.size() == 2) h_ATS_mLepNoVetoMuMu->Fill(DiLep.M(),theWeight);
 
 
             if((DiLep.M() < 106 && DiLep.M() > 76))
             {
                 if(bjets.size() >= 1)h_NinMuMu_AoneBS->Fill(1,theWeight);;
-                if(bjets.size() >= 2)h_NinMuMu_ABS->Fill(1,theWeight);;
+                if(bjets.size() >= 2)h_NinMuMu_ABS->Fill(1,theWeight);
+                if(bjets.size() == 2)h_NinMuMu_ATS->Fill(1,theWeight);
+
                 return;
             }
             if(!(DiLep.M() < 106 && DiLep.M() > 76))
             {
                 if(bjets.size() >= 1)h_NoutMuMu_AoneBS->Fill(1,theWeight);;
                 if(bjets.size() >= 2)h_NoutMuMu_ABS->Fill(1,theWeight);;
+                if(bjets.size() == 2) h_NoutMuMu_ATS->Fill(1,theWeight);
                 if(bjets.size() >= 2)
                 {
                     h_NeventsMuMu_ABS->Fill(1,theWeight);
@@ -2072,16 +2198,22 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         {
             if(bjets.size() >= 2) h_ABS_mLepNoVetoElEl->Fill(DiLep.M(),theWeight);
             if(bjets.size() >= 1) h_ABS_mLepNoVetoDiLep->Fill(DiLep.M(),theWeight);
+            if(bjets.size() == 2) h_ATS_mLepNoVetoElEl->Fill(DiLep.M(),theWeight);
+
             if((DiLep.M() < 106 && DiLep.M() > 76))
             {
                 if(bjets.size() >= 1)h_NinElEl_AoneBS->Fill(1,theWeight);;
                 if(bjets.size() >= 2)h_NinElEl_ABS->Fill(1,theWeight);;
+                if(bjets.size() == 2)h_NinElEl_ATS->Fill(1,theWeight);;
+
                 return;
             }
             if(!(DiLep.M() < 106 && DiLep.M() > 76))
             {
                 if(bjets.size() >= 1)h_NoutElEl_AoneBS->Fill(1,theWeight);;
                 if(bjets.size() >= 2)h_NoutElEl_ABS->Fill(1,theWeight);;
+                if(bjets.size() == 2)h_NoutElEl_ATS->Fill(1,theWeight);;
+
                 if(bjets.size() >= 2)
                 {
                     h_NeventsElEl_ABS->Fill(1,theWeight);
@@ -2115,11 +2247,14 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         {
             if(bjets.size() >= 2) h_ABS_mLepNoVetoElMu->Fill(DiLep.M(),theWeight);
             if(bjets.size() >= 1) h_ABS_mLepNoVetoDiLep->Fill(DiLep.M(),theWeight);
+            if(bjets.size() == 2) h_ATS_mLepNoVetoElMu->Fill(DiLep.M(),theWeight);
 
             if((DiLep.M() < 106 && DiLep.M() > 76))
             {
                 if(bjets.size() >= 1)h_NinElMu_AoneBS->Fill(1,theWeight);;
                 if(bjets.size() >= 2)h_NinElMu_ABS->Fill(1,theWeight);;
+                if(bjets.size() == 2)h_NinElMu_ATS->Fill(1,theWeight);;
+
             }
             if(bjets.size() >= 2)
             {
@@ -2152,11 +2287,14 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         {
             if(bjets.size() >= 2) h_ABS_mLepNoVetoElMu->Fill(DiLep.M(),theWeight);
             if(bjets.size() >= 1) h_ABS_mLepNoVetoDiLep->Fill(DiLep.M(),theWeight);
+            if(bjets.size() == 2) h_ATS_mLepNoVetoElMu->Fill(DiLep.M(),theWeight);
 
             if((DiLep.M() < 106 && DiLep.M() > 76))
             {
                 if(bjets.size() >= 1)h_NinElMu_AoneBS->Fill(1,theWeight);;
                 if(bjets.size() >= 2)h_NinElMu_ABS->Fill(1,theWeight);;
+                if(bjets.size() == 2)h_NinElMu_ATS->Fill(1,theWeight);;
+
             }
             if(bjets.size() >= 2)
             {
@@ -2225,7 +2363,9 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
             t1.SetPtEtaPhiM(topMuMu.pt(),topMuMu.eta(),topMuMu.phi(),topMuMu.mass());
             t2.SetPtEtaPhiM(antitopMuMu.pt(),antitopMuMu.eta(),antitopMuMu.phi(),antitopMuMu.mass());
-
+            double w = sqrt(SF(t1.Pt())*SF(t2.Pt()));
+            w_top = w_top*w;
+            theWeight=theWeight*w;
             ttbar = t1 + t2;
             h_GenTTbarM->Fill(ttbar.M(),theWeight);
             TruthMTT.push_back(ttbar.M());
@@ -2280,6 +2420,9 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
             t1.SetPtEtaPhiM(topElEl.pt(),topElEl.eta(),topElEl.phi(),topElEl.mass());
             t2.SetPtEtaPhiM(antitopElEl.pt(),antitopElEl.eta(),antitopElEl.phi(),antitopElEl.mass());
+double w = sqrt(SF(t1.Pt())*SF(t2.Pt()));
+            w_top = w_top*w;
+            theWeight=theWeight*w;
 
             ttbar = t1 + t2;
             h_GenTTbarM->Fill(ttbar.M(),theWeight);
@@ -2329,7 +2472,9 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
             t1.SetPtEtaPhiM(topElMu.pt(),topElMu.eta(),topElMu.phi(),topElMu.mass());
             t2.SetPtEtaPhiM(antitopElMu.pt(),antitopElMu.eta(),antitopElMu.phi(),antitopElMu.mass());
-
+double w = sqrt(SF(t1.Pt())*SF(t2.Pt()));
+            w_top = w_top*w;
+            theWeight=theWeight*w;
             ttbar = t1 + t2;
             h_GenTTbarM->Fill(ttbar.M(),theWeight);
             TruthMTT.push_back(ttbar.M());
@@ -2376,7 +2521,9 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
             t1.SetPtEtaPhiM(topElMu2.pt(),topElMu2.eta(),topElMu2.phi(),topElMu2.mass());
             t2.SetPtEtaPhiM(antitopElMu2.pt(),antitopElMu2.eta(),antitopElMu2.phi(),antitopElMu2.mass());
-
+double w = sqrt(SF(t1.Pt())*SF(t2.Pt()));
+            w_top = w_top*w;
+            theWeight=theWeight*w;
             ttbar = t1 + t2;
             h_GenTTbarM->Fill(ttbar.M(),theWeight);
             TruthMTT.push_back(ttbar.M());
@@ -2434,7 +2581,6 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         //        amwtsolver->SetConstraints(met.px(),met.py());
         //        TtFullLepKinSolver::NeutrinoSolution nuSol= amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
         // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
-
         dilepton = lepPos + lepNeg;
 
         if(nuSol.neutrino.pt()> 0 && nuSol.neutrinoBar.pt() > 0 )
@@ -2471,7 +2617,12 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_mTTbarMuMu->Fill(ttbar.M(),theWeight);
             h_TTbarM->Fill(ttbar.M(),theWeight);
 
-
+            t_antinu.push_back(LorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
+            t_nu.push_back(LorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
+            t_antiW.push_back(LorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
+            t_W.push_back(LorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
+            t_antitop.push_back(LorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
+            t_top.push_back(LorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
 
             //++n_afterTop;
             h_Nevents_top->Fill(1,theWeight);
@@ -2496,6 +2647,11 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             RecoCosMuMu.push_back(TMath::Cos(theta2));
             h_cosMuMu->Fill(TMath::Cos(theta2),theWeight);
             h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
+
+
+            t_cos.push_back(TMath::Cos(theta1));
+            t_cos.push_back(TMath::Cos(theta2));
+
 
             if(!isData)
             {
@@ -2612,7 +2768,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
         // cout << nuSol.neutrinoBar.p4() << " neutrinoBar "<< endl;
         dilepton = lepPos + lepNeg;
-        if(nuSol.neutrino.pt()> 0 && nuSol.neutrinoBar.pt() > 0 )
+        if(nuSol.neutrino.pt()> 20 && nuSol.neutrinoBar.pt() > 20 )
         {
             // cout << "what 0" << endl;
             TLorentzVector nu;
@@ -2652,7 +2808,12 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_NeventsElEl_top->Fill(1,theWeight);
             RecoMTT.push_back(ttbar.M());
 
-
+            t_antinu.push_back(LorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
+            t_nu.push_back(LorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
+            t_antiW.push_back(LorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
+            t_W.push_back(LorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
+            t_antitop.push_back(LorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
+            t_top.push_back(LorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
 
 
 
@@ -2674,6 +2835,10 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_cosElEl->Fill(TMath::Cos(theta2),theWeight);
             h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
             // cout << "what 4" << endl;
+
+            t_cos.push_back(TMath::Cos(theta1));
+            t_cos.push_back(TMath::Cos(theta2));
+
             if(!isData)
             {
                 TLorentzVector genW1;
@@ -2814,7 +2979,12 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_mTTbarElMu->Fill(ttbar.M(),theWeight);
             h_TTbarM->Fill(ttbar.M(),theWeight);
 
-
+            t_antinu.push_back(LorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
+            t_nu.push_back(LorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
+            t_antiW.push_back(LorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
+            t_W.push_back(LorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
+            t_antitop.push_back(LorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
+            t_top.push_back(LorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
 
             //++n_afterTop;
             h_Nevents_top->Fill(1,theWeight);
@@ -2837,6 +3007,10 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             //            RecoCos.push_back(theta2);
             h_cosElMu->Fill(TMath::Cos(theta2),theWeight);
             h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
+
+
+            t_cos.push_back(TMath::Cos(theta1));
+            t_cos.push_back(TMath::Cos(theta2));
 
             if(!isData)
             {
@@ -2981,7 +3155,12 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             h_Nevents_top->Fill(1,theWeight);
             h_NeventsElMu_top->Fill(1,theWeight);
             RecoMTT.push_back(ttbar.M());
-
+            t_antinu.push_back(LorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
+            t_nu.push_back(LorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
+            t_antiW.push_back(LorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
+            t_W.push_back(LorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
+            t_antitop.push_back(LorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
+            t_top.push_back(LorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
 
 
             lepPos.Boost(-W1.BoostVector());
@@ -2998,6 +3177,10 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
             //            RecoCos.push_back(theta1);
             h_cosElMu->Fill(TMath::Cos(theta2),theWeight);
             h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
+
+
+            t_cos.push_back(TMath::Cos(theta1));
+            t_cos.push_back(TMath::Cos(theta2));
 
             if(!isData)
             {
@@ -3083,6 +3266,10 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 
     t_outTree->Fill();
+    t_lumi = 0;
+    t_bunch = 0;
+    t_Event = 0;
+    t_Run = 0;
 
 
 }
@@ -3314,7 +3501,22 @@ void MiniAnalyzer::beginJob()
     h_NoutElEl_NoMET_AoneBS = fs->make<TH1F>("h_NoutElEl_NoMET_AoneBS","",10,-3,3);
     h_NoutElMu_NoMET_AoneBS = fs->make<TH1F>("h_NoutElMu_NoMET_AoneBS","",10,-3,3);
 
-
+    h_ATS_mLepNoVetoMuMu = fs->make<TH1F>("h_ATS_mLepNoVetoMuMu",";M_{ll};",300,0.,300.);
+    h_ATS_mLepNoVetoElEl = fs->make<TH1F>("h_ATS_mLepNoVetoElEl",";M_{ll};",300,0.,300.);
+    h_ATS_mLepNoVetoElMu = fs->make<TH1F>("h_ATS_mLepNoVetoElMu",";M_{ll};",300,0.,300.);
+    h_ATS_mLepNoVetoDiLep = fs->make<TH1F>("h_ATS_mLepNoVetoDiLep",";M_{ll};",300,0.,300.);
+    h_NinMuMu_ATS = fs->make<TH1F>("h_NinMuMu_ATS","",10,-3,3);
+    h_NinElEl_ATS = fs->make<TH1F>("h_NinElEl_ATS","",10,-3,3);
+    h_NinElMu_ATS = fs->make<TH1F>("h_NinElMu_ATS","",10,-3,3);
+    h_NoutMuMu_ATS = fs->make<TH1F>("h_NoutMuMu_ATS","",10,-3,3);
+    h_NoutElEl_ATS = fs->make<TH1F>("h_NoutElEl_ATS","",10,-3,3);
+    h_NoutElMu_ATS = fs->make<TH1F>("h_NoutElMu_ATS","",10,-3,3);
+    h_NinMuMu_NoMET_ATS = fs->make<TH1F>("h_NinMuMu_NoMET_ATS","",10,-3,3);
+    h_NinElEl_NoMET_ATS = fs->make<TH1F>("h_NinElEl_NoMET_ATS","",10,-3,3);
+    h_NinElMu_NoMET_ATS = fs->make<TH1F>("h_NinElMu_NoMET_ATS","",10,-3,3);
+    h_NoutMuMu_NoMET_ATS = fs->make<TH1F>("h_NoutMuMu_NoMET_ATS","",10,-3,3);
+    h_NoutElEl_NoMET_ATS = fs->make<TH1F>("h_NoutElEl_NoMET_ATS","",10,-3,3);
+    h_NoutElMu_NoMET_ATS = fs->make<TH1F>("h_NoutElMu_NoMET_ATS","",10,-3,3);
 
     //initialize the tree
     f_outFile->cd();
@@ -3340,7 +3542,29 @@ void MiniAnalyzer::beginJob()
 //    t_outTree->Branch("HLT_Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_v",&b_MuMu5);
 //    t_outTree->Branch("HLT_Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_v",&b_MuMu6);
 
-    //t_outTree->Branch("SlimmedMuon_Pt",&SlimmedMuon_Pt);
+    t_outTree->Branch("Leptons","std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >",&t_Leptons);
+    t_outTree->Branch("bJets","std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >",&t_bJets);
+    t_outTree->Branch("top","std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >",&t_top);
+    t_outTree->Branch("top_","std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >",&t_antitop);
+    t_outTree->Branch("W","std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >",&t_W);
+    t_outTree->Branch("W_","std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >",&t_antiW);
+    t_outTree->Branch("nu","std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >",&t_nu);
+    t_outTree->Branch("nu_","std::vector<ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > >",&t_antinu);
+    t_outTree->Branch("cos","vector<double>",&t_cos);
+    t_outTree->Branch("Run",&t_Run);
+    t_outTree->Branch("Event",&t_Event);
+    t_outTree->Branch("Lumi",&t_lumi);
+    t_outTree->Branch("Bunch",&t_bunch);
+    t_outTree->Branch("w_mc",&w_mc);
+    t_outTree->Branch("w_trigger_ee",&w_ee);
+    t_outTree->Branch("w_trigger_em",&w_em);
+    t_outTree->Branch("w_trigger_mm",&w_mm);
+    t_outTree->Branch("w_posEl",&w_posEl);
+    t_outTree->Branch("w_negEl",&w_negEl);
+    t_outTree->Branch("w_posMu",&w_posMu);
+    t_outTree->Branch("w_negMu",&w_negMu);
+    t_outTree->Branch("w_top",&w_top);
+
     //    t_outTree->Branch("TotalNumberOfEvents",&NEvent,"TotalNumberOfEvents/I");
     //    t_outTree->Branch("NGoodvtx",&nGoodVtxs,"NGoodvtx/I");
     //    t_outTree->Branch("RecoCos",&RecoCos);
@@ -3406,6 +3630,7 @@ void MiniAnalyzer::beginRun(const Run & iRun, const EventSetup &)
 
 
 }
+
 void MiniAnalyzer::endRun(const Run & iRun, const EventSetup &)
 {
     //cout << "Im in End Run" <<endl;

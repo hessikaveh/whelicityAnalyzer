@@ -1,0 +1,2 @@
+/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/ar cr libmy.a  CMakeFiles/my.dir/MiniAnalyzer.cc.o CMakeFiles/my.dir/ttamwtsolver.cpp.o CMakeFiles/my.dir/MSETools.cc.o
+/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/ranlib libmy.a

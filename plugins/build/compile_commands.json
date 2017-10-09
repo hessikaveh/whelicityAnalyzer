@@ -1,0 +1,17 @@
+[
+{
+  "directory": "/home/hkaveh/cmsdata3/workarea/CMSSW_8_0_25/src/whelicity1/MiniAnalyzer/plugins/build",
+  "command": "/usr/bin/c++    -I/cmsdata3/kaveh/workarea/cmssw -I/cmsdata3/kaveh/scratch/lhapdf-5.8.9/../local/include -I/home/hkaveh/root/include -I/opt/root-6.06.08/include -I/home/hkaveh/cmsdata3/kaveh/workarea/cmssw  --std=gnu++11   -g   -o CMakeFiles/my.dir/MiniAnalyzer.cc.o -c /home/hkaveh/cmsdata3/workarea/CMSSW_8_0_25/src/whelicity1/MiniAnalyzer/plugins/MiniAnalyzer.cc",
+  "file": "/home/hkaveh/cmsdata3/workarea/CMSSW_8_0_25/src/whelicity1/MiniAnalyzer/plugins/MiniAnalyzer.cc"
+},
+{
+  "directory": "/home/hkaveh/cmsdata3/workarea/CMSSW_8_0_25/src/whelicity1/MiniAnalyzer/plugins/build",
+  "command": "/usr/bin/c++    -I/cmsdata3/kaveh/workarea/cmssw -I/cmsdata3/kaveh/scratch/lhapdf-5.8.9/../local/include -I/home/hkaveh/root/include -I/opt/root-6.06.08/include -I/home/hkaveh/cmsdata3/kaveh/workarea/cmssw  --std=gnu++11   -g   -o CMakeFiles/my.dir/ttamwtsolver.cpp.o -c /home/hkaveh/cmsdata3/workarea/CMSSW_8_0_25/src/whelicity1/MiniAnalyzer/plugins/ttamwtsolver.cpp",
+  "file": "/home/hkaveh/cmsdata3/workarea/CMSSW_8_0_25/src/whelicity1/MiniAnalyzer/plugins/ttamwtsolver.cpp"
+},
+{
+  "directory": "/home/hkaveh/cmsdata3/workarea/CMSSW_8_0_25/src/whelicity1/MiniAnalyzer/plugins/build",
+  "command": "/usr/bin/c++    -I/cmsdata3/kaveh/workarea/cmssw -I/cmsdata3/kaveh/scratch/lhapdf-5.8.9/../local/include -I/home/hkaveh/root/include -I/opt/root-6.06.08/include -I/home/hkaveh/cmsdata3/kaveh/workarea/cmssw  --std=gnu++11   -g   -o CMakeFiles/my.dir/MSETools.cc.o -c /home/hkaveh/cmsdata3/workarea/CMSSW_8_0_25/src/whelicity1/MiniAnalyzer/plugins/MSETools.cc",
+  "file": "/home/hkaveh/cmsdata3/workarea/CMSSW_8_0_25/src/whelicity1/MiniAnalyzer/plugins/MSETools.cc"
+}
+]
