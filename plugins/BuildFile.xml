@@ -4,12 +4,14 @@
 <use name="FWCore/ServiceRegistry"/>
 <use name="FWCore/Common"/>
 <use name="DataFormats/VertexReco"/>
+<use name="DataFormats/Math"/>
 <use name="DataFormats/Candidate"/>
 <use name="DataFormats/PatCandidates"/>
 <use name="DataFormats/RecoCandidate"/>
 <use name="DataFormats/HepMCCandidate"/>
 <use name="DataFormats/Common"/>
 <use name="DataFormats/Provenance"/>
+<use name="DataFormats/JetReco"/>
 <use name="CommonTools/UtilAlgos"/>
 <use name="CommonTools/Utils"/>
 <use name="CommonTools/CandUtils"/>
@@ -17,7 +19,9 @@
 <use name="FWCore/Utilities"/>
 <use name="TopQuarkAnalysis/TopKinFitter"/>
 <use name="PhysicsTools/KinFitter"/>
+<use name="PhysicsTools/Utilities"/>
 <use name="SimDataFormats/GeneratorProducts"/>
+<use name="SimDataFormats/PileupSummaryInfo"/>
 <use name="RecoEgamma/EgammaTools"/>
 <use name="LHAPDF"/>
 <use name="JetMETCorrections/Modules"/>

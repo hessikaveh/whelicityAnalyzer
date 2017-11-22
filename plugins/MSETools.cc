@@ -46,6 +46,35 @@ bool mse::decaysToC(const reco::GenParticle& gp)
     return false ;
 } // decaysToC
 
+//const reco::GenJet match(pat::Jet jet, double resolution,const reco::GenJetCollection m_genJets) {
+//                const reco::GenJetCollection genJets = m_genJets;
+
+//                // Try to find a gen jet matching
+//                // dR < m_dR_max
+//                // dPt < m_dPt_max_factor * resolution
+
+//                double min_dR = std::numeric_limits<double>::infinity();
+//                const reco::GenJet* matched_genJet = nullptr ;
+//                double m_dR_max = 0.2;
+//                double m_dPt_max_factor = 3;
+//                for ( const auto& genJet: genJets) {
+//                    double dR = ROOT::Math::VectorUtil::DeltaR(genJet.p4(), jet.p4());
+
+//                    if (dR > min_dR)
+//                        continue;
+
+//                    if (dR < m_dR_max) {
+//                        double dPt = std::abs(genJet.pt() - jet.pt());
+//                        if (dPt > m_dPt_max_factor * resolution)
+//                            continue;
+
+//                        min_dR = dR;
+//                        matched_genJet = &genJet;
+//                    }
+//                }
+
+//                return *matched_genJet;
+//}
 
 const pat::PackedGenParticle mse::getMatchedGenParticle(const pat::GenericParticle& muon, const edm::View<pat::PackedGenParticle> &gpcol, int absPdgId)
 {

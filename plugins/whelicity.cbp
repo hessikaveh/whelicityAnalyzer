@@ -8,89 +8,75 @@
       <Option virtualFolders="CMake Files\;" />
       <Build>
       <Target title="all">
-         <Option working_dir="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins" />
+         <Option working_dir="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins" />
          <Option type="4" />
          <MakeCommands>
-            <Build command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 all" />
-            <CompileFile command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
-            <Clean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
-            <DistClean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
+            <Build command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 all" />
+            <CompileFile command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
          </MakeCommands>
       </Target>
       <Target title="my">
-         <Option output="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/libmy.a" prefix_auto="0" extension_auto="0" />
-         <Option working_dir="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins" />
+         <Option output="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/libmy.a" prefix_auto="0" extension_auto="0" />
+         <Option working_dir="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins" />
          <Option object_output="./" />
          <Option type="2" />
          <Option compiler="gcc" />
          <Compiler>
             <Add directory="/cmsdata3/kaveh/scratch/lhapdf-5.8.9/../local/include" />
             <Add directory="/cmsdata3/kaveh/workarea/cmssw" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/../../include" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/x86_64-pc-linux-gnu/5.3.0/../../../../include/c++/5.3.0" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/x86_64-pc-linux-gnu/5.3.0/../../../../include/c++/5.3.0/backward" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/x86_64-pc-linux-gnu/5.3.0/../../../../include/c++/5.3.0/x86_64-pc-linux-gnu" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/x86_64-pc-linux-gnu/5.3.0/include" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/x86_64-pc-linux-gnu/5.3.0/include-fixed" />
             <Add directory="/opt/root-6.06.08/include" />
-            <Add directory="/usr/include" />
-            <Add directory="/usr/local/include" />
          </Compiler>
          <MakeCommands>
-            <Build command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 my" />
-            <CompileFile command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
-            <Clean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
-            <DistClean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
+            <Build command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 my" />
+            <CompileFile command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
          </MakeCommands>
       </Target>
       <Target title="my/fast">
-         <Option output="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/libmy.a" prefix_auto="0" extension_auto="0" />
-         <Option working_dir="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins" />
+         <Option output="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/libmy.a" prefix_auto="0" extension_auto="0" />
+         <Option working_dir="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins" />
          <Option object_output="./" />
          <Option type="2" />
          <Option compiler="gcc" />
          <Compiler>
             <Add directory="/cmsdata3/kaveh/scratch/lhapdf-5.8.9/../local/include" />
             <Add directory="/cmsdata3/kaveh/workarea/cmssw" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/../../include" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/x86_64-pc-linux-gnu/5.3.0/../../../../include/c++/5.3.0" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/x86_64-pc-linux-gnu/5.3.0/../../../../include/c++/5.3.0/backward" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/x86_64-pc-linux-gnu/5.3.0/../../../../include/c++/5.3.0/x86_64-pc-linux-gnu" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/x86_64-pc-linux-gnu/5.3.0/include" />
-            <Add directory="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/external/gcc/5.3.0/bin/../lib/gcc/x86_64-pc-linux-gnu/5.3.0/include-fixed" />
             <Add directory="/opt/root-6.06.08/include" />
-            <Add directory="/usr/include" />
-            <Add directory="/usr/local/include" />
          </Compiler>
          <MakeCommands>
-            <Build command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 my/fast" />
-            <CompileFile command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
-            <Clean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
-            <DistClean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
+            <Build command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 my/fast" />
+            <CompileFile command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
          </MakeCommands>
       </Target>
       <Target title="rebuild_cache">
-         <Option working_dir="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins" />
+         <Option working_dir="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins" />
          <Option type="4" />
          <MakeCommands>
-            <Build command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 rebuild_cache" />
-            <CompileFile command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
-            <Clean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
-            <DistClean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch1/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
+            <Build command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 rebuild_cache" />
+            <CompileFile command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/cvmfs/cms.cern.ch/slc6_amd64_gcc530/cms/cmssw-patch/CMSSW_8_0_26_patch2/external/slc6_amd64_gcc530/bin/gmake -f &quot;/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/Makefile&quot;  VERBOSE=1 clean" />
          </MakeCommands>
       </Target>
       </Build>
-      <Unit filename="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/MSETools.cc">
+      <Unit filename="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/MSETools.cc">
       </Unit>
-      <Unit filename="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/MiniAnalyzer.cc">
+      <Unit filename="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/MiniAnalyzer.cc">
       </Unit>
-      <Unit filename="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/ttamwtsolver.cpp">
+      <Unit filename="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/ttamwtsolver.cpp">
       </Unit>
-      <Unit filename="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/MSETools.h">
+      <Unit filename="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/MSETools.h">
       </Unit>
-      <Unit filename="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/ttamwtsolver.h">
+      <Unit filename="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/MiniAnalyzer.h">
       </Unit>
-      <Unit filename="/cmsdata3/kaveh/workarea/CMSSW_8_0_26_patch1/src/whelicity1/MiniAnalyzer/plugins/CMakeLists.txt">
+      <Unit filename="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/ttamwtsolver.h">
+      </Unit>
+      <Unit filename="/cmsdata3/kaveh/AnalysisReproduction/CMSSW_8_0_26_patch2/src/whelicity1/MiniAnalyzer/plugins/CMakeLists.txt">
           <Option virtualFolder="CMake Files\" />
       </Unit>
    </Project>

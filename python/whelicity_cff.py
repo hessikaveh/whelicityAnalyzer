@@ -42,8 +42,14 @@ Whelicity = cms.EDAnalyzer("MiniAnalyzer",
     eleIdMap = cms.InputTag("egmGsfElectronIDs:cutBasedElectronID-Summer16-80X-V1-tight"),
     ee_sf = cms.string("triggerSummary_ee.root"),
 	em_sf = cms.string("triggerSummary_emu.root"),
-	mm_sf = cms.string("triggerSummary_mumu.root")
-
+	mm_sf = cms.string("triggerSummary_mumu.root"),
+    PileupSrc = cms.InputTag("slimmedAddPileupInfo"),
+	SlimmedGenJets = cms.InputTag("slimmedGenJets"),
+	pileup_data = cms.string("pileup_distribution_data16.root"),
+	pileup_mc = cms.string("pileup_distribution_moriond17.root"),
+    ptResData = cms.string("Spring16_25nsV6_DATA_PtResolution_AK4PFchs.txt"),
+	phiResData = cms.string("Spring16_25nsV6_DATA_PhiResolution_AK4PFchs.txt"),
+	sfResData = cms.string("Spring16_25nsV6_DATA_SF_AK4PFchs.txt")
 	
 )
 
