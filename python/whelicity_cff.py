@@ -49,7 +49,11 @@ Whelicity = cms.EDAnalyzer("MiniAnalyzer",
 	pileup_mc = cms.string("pileup_distribution_moriond17.root"),
     ptResData = cms.string("Spring16_25nsV6_DATA_PtResolution_AK4PFchs.txt"),
 	phiResData = cms.string("Spring16_25nsV6_DATA_PhiResolution_AK4PFchs.txt"),
-	sfResData = cms.string("Spring16_25nsV6_DATA_SF_AK4PFchs.txt")
+	sfResData = cms.string("Spring16_25nsV6_DATA_SF_AK4PFchs.txt"),
+    beamSpot = cms.InputTag('offlineBeamSpot'),
+    conversionsMiniAOD = cms.InputTag('reducedEgamma:reducedConversions'),
+	eleIdFullInfoMap = cms.InputTag("egmGsfElectronIDs:cutBasedElectronID-Summer16-80X-V1-tight"),
+	eleIdVerbose = cms.bool(False)
 	
 )
 

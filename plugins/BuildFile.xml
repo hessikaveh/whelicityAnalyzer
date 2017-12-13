@@ -12,6 +12,7 @@
 <use name="DataFormats/Common"/>
 <use name="DataFormats/Provenance"/>
 <use name="DataFormats/JetReco"/>
+<use name="DataFormats/EgammaCandidates"/>
 <use name="CommonTools/UtilAlgos"/>
 <use name="CommonTools/Utils"/>
 <use name="CommonTools/CandUtils"/>

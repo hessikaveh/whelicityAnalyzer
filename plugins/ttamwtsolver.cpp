@@ -21,8 +21,8 @@ TtAMWTSolver::TtAMWTSolver(bool isData, const double b, const double e, const do
     e_com(13000)
 
 {
-    if (isData) nbrJetSmear = 1;
-    else nbrJetSmear = 1;
+    if (isData) nbrJetSmear = 500;
+    else nbrJetSmear = 500;
 //    cout << "Number of iterations: " << nbrJetSmear<<endl;
 
     //PDF Initialization
