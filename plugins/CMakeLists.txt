@@ -12,5 +12,5 @@ include_directories("/opt/root-6.06.08/include/")
 
 #include_directories("/home/hkaveh/cmsdata3/kaveh/workarea/cmssw/")
 
-add_library(my MiniAnalyzer.cc ttamwtsolver.cpp MSETools.cc)
+add_library(my MiniAnalyzer.cc ttamwtsolver.cpp  NeutrinoEllipseCalculator.C MSETools.cc)
 

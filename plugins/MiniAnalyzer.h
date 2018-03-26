@@ -60,8 +60,6 @@
 #include "AnalysisDataFormats/TopObjects/interface/TtDilepEvtSolution.h"
 #include "CondFormats/BTauObjects/interface/BTagCalibration.h"
 #include "CondTools/BTau/interface/BTagCalibrationReader.h"
-#include "ttamwtsolver.h"
-#include "MSETools.h"
 #include "DataFormats/Common/interface/ValueMap.h"
 #include "DataFormats/PatCandidates/interface/VIDCutFlowResult.h"
 #include "AnalysisDataFormats/TopObjects/interface/TtGenEvent.h"
@@ -71,16 +69,21 @@
 #include "DataFormats/EgammaCandidates/interface/ConversionFwd.h"
 #include "DataFormats/EgammaCandidates/interface/Conversion.h"
 #include "RecoEgamma/EgammaTools/interface/ConversionTools.h"
+#include "DataFormats/TrackReco/interface/TrackBase.h"
+#include "ttamwtsolver.h"
+#include "MSETools.h"
 
 using namespace std;
 using namespace pat;
 using namespace edm;
 using namespace reco;
-
+typedef math::XYZPoint Point;
+typedef math::XYZTLorentzVector myLorentzVector;
 struct MyLepton
 {
     string type;
     int flavour;
+    float mass;
     //pat::Particle pat_particle;
     // pat::Electron pat_particle;
     pat::GenericParticle pat_particle;
@@ -142,7 +145,8 @@ private:
     bool isElMu = false;
     bool isMuEl = false;
     bool isDiLeptonic = false;
-
+const float m_el = 0.000511;
+       const float m_mu = 0.10566;
 
     // function declaration
     bool IsSoftMuon(const pat::Muon&, const reco::Vertex&);
@@ -455,7 +459,7 @@ private:
     bool b_Mu1=0,b_Mu2=0,b_Mu3=0,b_Mu4=0,b_MuMu1=0,b_MuMu2=0,b_MuMu3=0,b_MuMu4=0,b_El1=0,b_El2=0,b_El3=0,b_ElEl1=0,b_ElEl2=0,b_ElMu1=0,b_ElMu2=0,b_ElMu3=0,b_ElMu4=0,b_ElMu5=0,b_ElMu6=0;
     bool isPythia;
     edm::EDGetTokenT<edm::TriggerResults> triggerFilters_;
-    bool Flag_globalTightHalo2016Filter=0,Flag_HBHENoiseFilter=0,Flag_HBHENoiseIsoFilter=0,Flag_BadPFMuonFilter=0,Flag_BadChargedCandidateFilter=0,Flag_EcalDeadCellTriggerPrimitiveFilter=0,Flag_eeBadScFilter=0;
+    bool Flag_goodVertices=0, Flag_globalTightHalo2016Filter=0,Flag_HBHENoiseFilter=0,Flag_HBHENoiseIsoFilter=0,Flag_BadPFMuonFilter=0,Flag_BadChargedCandidateFilter=0,Flag_EcalDeadCellTriggerPrimitiveFilter=0,Flag_eeBadScFilter=0;
     bool DiMu;
     bool DiEl;
     bool ElMu;
@@ -491,7 +495,7 @@ private:
 
     vector<double> t_cos;
 
-    vector<LorentzVector> t_Leptons;
+    vector<myLorentzVector> t_Leptons;
     vector<double> t_Leptons_pt;
     vector<double> t_Leptons_eta;
     vector<double> t_Leptons_phi;
@@ -522,7 +526,7 @@ private:
     vector<int> t_gen_mothers_id;
 
 
-    vector<LorentzVector> t_Jets;
+    vector<myLorentzVector> t_Jets;
     vector<double> t_Jets_pt;
     vector<double> t_Jets_eta;
     vector<double> t_Jets_phi;
@@ -554,7 +558,7 @@ private:
     vector<double> t_Met_py;
     vector<double> t_Met_sum;
 
-    vector<LorentzVector> t_bJets;
+    vector<myLorentzVector> t_bJets;
     vector<double> t_bJets_pt;
     vector<double> t_bJets_eta;
     vector<double> t_bJets_phi;
@@ -562,34 +566,34 @@ private:
     int t_Leptons_size;
     int t_Muons_size;
     int t_Electrons_size;
-    vector<LorentzVector> t_top;
+    vector<myLorentzVector> t_top;
     vector<double> t_top_pt;
     vector<double> t_top_eta;
     vector<double> t_top_phi;
     vector<double> t_top_e;
 
-    vector<LorentzVector> t_antitop;
+    vector<myLorentzVector> t_antitop;
 vector<double> t_antitop_pt;
     vector<double> t_antitop_eta;
     vector<double> t_antitop_phi;
     vector<double> t_antitop_e;
 
-    vector<LorentzVector> t_W;
+    vector<myLorentzVector> t_W;
 vector<double> t_W_pt;
     vector<double> t_W_eta;
     vector<double> t_W_phi;
     vector<double> t_W_e;
-    vector<LorentzVector> t_antiW;
+    vector<myLorentzVector> t_antiW;
     vector<double> t_antiW_pt;
     vector<double> t_antiW_eta;
     vector<double> t_antiW_phi;
     vector<double> t_antiW_e;
-    vector<LorentzVector> t_nu;
+    vector<myLorentzVector> t_nu;
     vector<double> t_nu_pt;
     vector<double> t_nu_eta;
     vector<double> t_nu_phi;
     vector<double> t_nu_e;
-    vector<LorentzVector> t_antinu;
+    vector<myLorentzVector> t_antinu;
     vector<double> t_antinu_pt;
     vector<double> t_antinu_eta;
     vector<double> t_antinu_phi;
@@ -628,6 +632,10 @@ vector<double> t_W_pt;
     edm::EDGetTokenT<reco::ConversionCollection> conversionsMiniAODToken_;
     edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
     edm::EDGetTokenT<edm::ValueMap<vid::CutFlowResult> > eleIdFullInfoMapToken_;
+    edm::EDGetTokenT<bool> BadChCandFilterToken_;
+    edm::EDGetTokenT<bool> BadPFMuonFilterToken_;
+
+
      bool verboseIdFlag_;
 
 };

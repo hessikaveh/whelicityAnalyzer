@@ -2,6 +2,8 @@
 
 
 
+
+
 MiniAnalyzer::MiniAnalyzer(const edm::ParameterSet& iConfig):
     vtxToken_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertices"))),
     muonToken_(consumes<pat::MuonCollection>(iConfig.getParameter<edm::InputTag>("muons"))),
@@ -51,21 +53,24 @@ MiniAnalyzer::MiniAnalyzer(const edm::ParameterSet& iConfig):
     genJetToken_(mayConsume<reco::GenJetCollection>(iConfig.getParameter<edm::InputTag>("SlimmedGenJets"))),
     s_pileup_data( (iConfig.getParameter<string>("pileup_data"))),
     s_pileup_mc( (iConfig.getParameter<string>("pileup_mc"))),
-    eleIdFullInfoMapToken_(consumes<edm::ValueMap<vid::CutFlowResult> >
+    beamSpotToken_ (consumes<reco::BeamSpot>
+            (iConfig.getParameter <edm::InputTag>
+             ("beamSpot"))),
+             eleIdFullInfoMapToken_(consumes<edm::ValueMap<vid::CutFlowResult> >
                            (iConfig.getParameter<edm::InputTag>("eleIdFullInfoMap"))),
-    verboseIdFlag_(iConfig.getParameter<bool>("eleIdVerbose"))
+             verboseIdFlag_(iConfig.getParameter<bool>("eleIdVerbose"))
 
 
 
 
 
 {
-    beamSpotToken_    = consumes<reco::BeamSpot>
-            (iConfig.getParameter <edm::InputTag>
-             ("beamSpot"));
+    
     conversionsMiniAODToken_ = mayConsume< reco::ConversionCollection >
             (iConfig.getParameter<edm::InputTag>
              ("conversionsMiniAOD"));
+    BadChCandFilterToken_ = consumes<bool>(InputTag("BadChargedCandidateFilter"));
+    BadPFMuonFilterToken_ = consumes<bool>(InputTag("BadPFMuonFilter"));
 
     // initializing the solver
     if(!isData)
@@ -77,10 +82,10 @@ MiniAnalyzer::MiniAnalyzer(const edm::ParameterSet& iConfig):
     }
     else
     {
-        amwtSolver = new TtAMWTSolver(isData,172.44,172.50,0.1,80.4,4.8,ptResData,phiResData,sfResData);
+        amwtSolver = new TtAMWTSolver(isData,172.44,172.50,0.1,80.4,4.8,ptResData,phiResData,sfRes);
         ptResol  = new JME::JetResolution(ptResData);
         phiResol = new JME::JetResolution(phiResData);
-        jerSF = new JME::JetResolutionScaleFactor(sfResData);
+        jerSF = new JME::JetResolutionScaleFactor(sfRes);
     }
     //    std::vector<double> nupars= {30.7137,56.2880,23.0744,59.1015,24.9145};
     //    amwtsolver = new TtFullLepKinSolver(172.5,172.5,10,nupars,80.4,4.8);
@@ -119,6 +124,7 @@ MiniAnalyzer::MiniAnalyzer(const edm::ParameterSet& iConfig):
         LumiWeights_ = edm::LumiReWeighting(s_pileup_mc,s_pileup_data,"pileup","pileup");
 
     }
+
 
 
 }
@@ -176,6 +182,18 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
     edm::Handle<pat::METCollection> mets;
     iEvent.getByToken(metToken_, mets);
+
+
+    edm::Handle<bool> ifilterbadChCand;
+     iEvent.getByToken(BadChCandFilterToken_, ifilterbadChCand);
+     bool  filterbadChCandidate = *ifilterbadChCand;
+
+
+     edm::Handle<bool> ifilterbadPFMuon;
+     iEvent.getByToken(BadPFMuonFilterToken_, ifilterbadPFMuon);
+     bool filterbadPFMuon = *ifilterbadPFMuon;
+
+
 
     Handle<edm::View<reco::GenParticle> > pruned;
     Handle<edm::View<pat::PackedGenParticle> > packed;
@@ -285,6 +303,73 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     t_bJets.clear();
     t_cos.clear();
     t_Leptons.clear();
+    ///Noise filters
+    edm::Handle<edm::TriggerResults> triggerFilters; // Flag and filters
+    iEvent.getByToken(triggerFilters_,triggerFilters);
+    const edm::TriggerNames& filterNames = iEvent.triggerNames(*triggerFilters);
+    for (unsigned int i = 0, n = triggerFilters->size(); i < n; ++i)
+    {
+        std::string nameFilter;
+        nameFilter = filterNames.triggerName(i);
+//        cout << nameFilter <<endl;
+        if(nameFilter.compare("Flag_globalTightHalo2016Filter") == 0)
+        {
+            Flag_globalTightHalo2016Filter = triggerFilters->accept(i);
+            //            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_HBHENoiseFilter") == 0)
+        {
+            Flag_HBHENoiseFilter = triggerFilters->accept(i);
+            //            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_HBHENoiseIsoFilter") == 0)
+        {
+            Flag_HBHENoiseIsoFilter = triggerFilters->accept(i);
+            //            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_EcalDeadCellTriggerPrimitiveFilter") == 0)
+        {
+            Flag_EcalDeadCellTriggerPrimitiveFilter = triggerFilters->accept(i);
+            //            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_BadPFMuonFilter") == 0)
+        {
+            Flag_BadPFMuonFilter = triggerFilters->accept(i);
+            //            cout << nameFilter <<endl;
+        }
+        if(nameFilter.compare("Flag_BadChargedCandidateFilter") == 0)
+        {
+            Flag_BadChargedCandidateFilter = triggerFilters->accept(i);
+                        cout << Flag_BadChargedCandidateFilter  <<endl;
+        }
+        if(nameFilter.compare("Flag_goodVertices") == 0)
+        {
+         Flag_goodVertices = triggerFilters->accept(i);
+        }
+        if(nameFilter.compare("Flag_eeBadScFilter") == 0)
+        {
+            Flag_eeBadScFilter = triggerFilters->accept(i);
+            //            cout << nameFilter <<endl;
+        }
+
+        //        if(nameFilter.find("Flag") != std::string::npos) cout << nameFilter <<endl;
+    }
+
+   if(!( Flag_goodVertices && (filterbadChCandidate==true) && (filterbadPFMuon==true) && Flag_globalTightHalo2016Filter && Flag_HBHENoiseFilter && Flag_HBHENoiseIsoFilter && Flag_EcalDeadCellTriggerPrimitiveFilter )) return;
+
+
+  if(isData && !(Flag_eeBadScFilter) ) return; /*&& Flag_BadChargedCandidateFilter && Flag_BadPFMuonFilter*/
+
+//  bool MET_filters_MC=false;
+//  if ( trig_Flag_goodVertices_accept &&  trig_Flag_globalTightHalo2016Filter_accept && trig_Flag_HBHENoiseFilter_accept && trig_Flag_HBHENoiseIsoFilter_accept && trig_Flag_EcalDeadCellTriggerPrimitiveFilter_accept && trig_Flag_BadPFMuonFilter_accept==true && trig_Flag_BadChargedCandidateFilter_accept==true)
+//    MET_filters_MC=true;
+
+
+//    //pass met filters for data
+//    bool MET_filters_data=false;
+// if ( trig_Flag_goodVertices_accept &&  trig_Flag_globalTightHalo2016Filter_accept && trig_Flag_HBHENoiseFilter_accept && trig_Flag_HBHENoiseIsoFilter_accept && trig_Flag_EcalDeadCellTriggerPrimitiveFilter_accept && trig_Flag_BadPFMuonFilter_accept==true && trig_Flag_BadChargedCandidateFilter_accept==true && trig_Flag_eeBadScFilter_accept)
+//     MET_filters_data=true;
+
     /////////////////////0b HLT trigger/////////////////////
     edm::Handle<edm::TriggerResults> trigResults; //our trigger result object
 
@@ -504,9 +589,9 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
     if(!isData)
     {
-        if(ElMu && !(b_Mu1 || b_Mu2 || b_El2 || b_ElMu1 || b_ElMu2 || b_ElMu3 || b_ElMu4 )) return;
+        if(ElMu && !(b_Mu1 || b_Mu2 || b_El2 || b_ElMu1  || b_ElMu3  )) return;
         if(DiEl && !(b_El2 || b_ElEl1)) return;
-        if(DiMu && !(b_Mu1 || b_Mu2  || b_MuMu1 || b_MuMu3 || b_MuMu4 ) ) return;
+        if(DiMu && !(b_Mu1 || b_Mu2  || b_MuMu1  ) ) return;
 
     }
     if(DiEl && isData)
@@ -603,85 +688,35 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
 
     ///Vertex Filter
-    if (vertices->empty()) return;
-    VertexCollection::const_iterator PV = vertices->begin();
-    bool isFake = (PV->chi2()==0 && PV->ndof()==0);
-    if(isFake) return;
-    if(!(PV->ndof() >= 4.)) return;
-    if(!(fabs(PV->position().Rho()) < 2.0)) return;
-    if(!(fabs(PV->position().Z()) < 24.0)) return;
-    if (vertices->empty()) return;
-
-    //        VertexCollection::const_iterator PV = vertices->end();
-    //        for (VertexCollection::const_iterator vtx = vertices->begin(); vtx != vertices->end(); ++vtx, ++PV)
-    //        {
-    //            bool isFake = (vtx->chi2()==0 && vtx->ndof()==0);
-    //            if ( !(isFake)
-    //                    && vtx->ndof() >= 4. && fabs(vtx->position().Rho()) < 2.0
-    //                    && fabs(vtx->position().Z()) < 24.0)
-    //           {
-    //               PV = vtx;
-    //               break;
-    //            }
-    //       }
-    //       if (PV==vertices->end()) return;
-
-
-
+     if (vertices->empty()) return;
+    Vertex PV = vertices->front();
+  // bool isFake = (PV.chi2()==0 && PV.ndof()==0);
+  // if(isFake) return;
+  // if(!(PV.ndof() >= 4.)) return;
+ //  if(!(fabs(PV.position().Rho()) < 2.0)) return;
+//    if(!(fabs(PV.position().Z()) < 24.0)) return;
+    //if (vertices->empty()) return;
+//VertexCollection::const_iterator pv = vertices->end();
+   //       Vertex PV;
+     //    for (VertexCollection::const_iterator vtx = vertices->begin(); vtx != vertices->end(); ++vtx)
+    //      {
+       //      bool isFake = (vtx->chi2()==0 && vtx->ndof()==0);
+       //       if ( !(isFake)
+         //            && vtx->ndof() >= 4. && fabs(vtx->position().Rho()) < 2.0
+          //            && fabs(vtx->position().Z()) < 24.0)
+      //         {
+        //        PV = *vtx;
+        //        pv=vtx;
+      //         break;
+      //       }
+    //    }
+       //  if (pv==vertices->end()) return;
 
 
-    ///Noise filters
-    edm::Handle<edm::TriggerResults> triggerFilters; // Flag and filters
-    iEvent.getByToken(triggerFilters_,triggerFilters);
-    const edm::TriggerNames& filterNames = iEvent.triggerNames(*triggerFilters);
-    for (unsigned int i = 0, n = triggerFilters->size(); i < n; ++i)
-    {
-        std::string nameFilter;
-        nameFilter = filterNames.triggerName(i);
-        if(nameFilter.compare("Flag_globalTightHalo2016Filter") == 0)
-        {
-            Flag_globalTightHalo2016Filter = triggerFilters->accept(i);
-            //            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_HBHENoiseFilter") == 0)
-        {
-            Flag_HBHENoiseFilter = triggerFilters->accept(i);
-            //            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_HBHENoiseIsoFilter") == 0)
-        {
-            Flag_HBHENoiseIsoFilter = triggerFilters->accept(i);
-            //            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_EcalDeadCellTriggerPrimitiveFilter") == 0)
-        {
-            Flag_EcalDeadCellTriggerPrimitiveFilter = triggerFilters->accept(i);
-            //            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_BadPFMuonFilter") == 0)
-        {
-            Flag_BadPFMuonFilter = triggerFilters->accept(i);
-            //            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_BadChargedCandidateFilter") == 0)
-        {
-            Flag_BadChargedCandidateFilter = triggerFilters->accept(i);
-            //            cout << nameFilter <<endl;
-        }
-        if(nameFilter.compare("Flag_eeBadScFilter") == 0)
-        {
-            Flag_eeBadScFilter = triggerFilters->accept(i);
-            //            cout << nameFilter <<endl;
-        }
-
-        //        if(nameFilter.find("Flag") != std::string::npos) cout << nameFilter <<endl;
-    }
-
-    if(!( Flag_globalTightHalo2016Filter && Flag_HBHENoiseFilter && Flag_HBHENoiseIsoFilter && Flag_EcalDeadCellTriggerPrimitiveFilter )) return;
 
 
-    if(isData && !(Flag_eeBadScFilter) ) return; /*&& Flag_BadChargedCandidateFilter && Flag_BadPFMuonFilter*/
 
+    
 
 
 
@@ -703,17 +738,31 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     vector<pat::GenericParticle> MyMuons;
     vector<pat::GenericParticle> MyElectrons;
     vector<MyLepton> MyLeptons;
-
+    
+Point bspoint =  Point(0.0,0.0,0.0) ;
+bspoint.SetXYZ(theBeamSpot->position().x(),theBeamSpot->position().y(),theBeamSpot->position().z());
 
     for (pat::MuonCollection::const_iterator mup = muons->begin(); mup != muons->end(); ++mup)
     {
 
         //        if( !(mup->charge() > 0)) continue;
         if( !(mup->pt() > 20.0 )) continue;
-        if( !(fabs(mup->eta()) <= 2.4 )) continue;
+        if( !(fabs(mup->eta()) < 2.4 )) continue;
+        if( !(mup->isTightMuon(PV))) continue;
 
-
-        if(!(mup->isTightMuon(*PV))) continue;
+//        if( !(mup->isPFMuon())) continue;
+//        if( !(mup->isGlobalMuon())) continue;
+//        if( !(mup->globalTrack()->normalizedChi2() < 10)) continue;
+//        if( !(mup->globalTrack()->hitPattern().numberOfValidMuonHits() > 0)) continue;
+//        if( !(mup->numberOfMatchedStations() > 1)) continue;
+//if( !(fabs(mup->innerTrack()->dxy(bspoint)) < 0.2)) continue;
+   //     if( !(fabs(mup->innerTrack()->dz(bspoint)) < 0.5)) continue;
+       
+        //if( !(fabs(mup->muonBestTrack()->dxy(PV.position())) < 0.2)) continue;
+//        if( !(fabs(mup->muonBestTrack()->dz(PV.position())) < 0.5)) continue;
+     
+// if( !(mup->innerTrack()->hitPattern().numberOfValidPixelHits() > 0)) continue;
+//      if( !(mup->innerTrack()->hitPattern().trackerLayersWithMeasurement() > 5)) continue;
         coriso = 9999;
         //        cout << "isolation before " <<coriso <<endl;
         if(!(mup->isIsolationValid())) continue;
@@ -730,6 +779,7 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         lep.pat_particle = *mup;
         lep.flavour = 13;
         lep.type = "muon";
+        lep.mass = m_mu;
         MyLeptons.push_back(lep);
         //        if(mup->pt() > posMu.pt() ) posMu = *mup;
         //        // cout << mup->pt() <<endl;
@@ -747,6 +797,8 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     ////////////////////ELECTRONS//////////////////////////
     /// electron identification
     /////tight electrons
+//cout << theBeamSpot->position().x() << theBeamSpot->position().Y()<<endl;
+//cout << PV.position().x() << PV.position().y()<<endl;
 
     for (size_t i = 0; i < electrons->size(); ++i)
     {
@@ -759,22 +811,23 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         bool passConvVeto = !ConversionTools::hasMatchedConversion(*elp,
                                                                    conversions,
                                                                    theBeamSpot->position());
-        if(!passConvVeto) continue;
+        //        if(!passConvVeto) continue;
         bool isPassEleId = (*ele_id_decisions)[elp];
         if(!isPassEleId)continue;
+        if((fabs(elp->superCluster()->eta()) > 1.4442 && fabs(elp->superCluster()->eta()) < 1.5660 )) continue;
         if(fabs(elp->superCluster()->eta()) <= 1.479)
         {
-            if(fabs(elp->superCluster()->eta()) >= 1.4442) continue;
+
             //impact parameters
-            if( !( fabs((-1)*elp->gsfTrack()->dxy(PV->position())) < 0.05 )) continue;
-            if(!( fabs(elp->gsfTrack()->dz(PV->position())) < 0.10)) continue;
+            if( !( fabs((-1)*elp->gsfTrack()->dxy(PV.position())) < 0.05 )) continue;
+            if(!( fabs(elp->gsfTrack()->dz(PV.position())) < 0.10)) continue;
         }
         if(fabs(elp->superCluster()->eta()) > 1.479)
         {
-            if(fabs(elp->superCluster()->eta()) <= 1.5660) continue;
+
             //impact parameters
-            if( !( fabs((-1)*elp->gsfTrack()->dxy(PV->position()))  < 0.1 )) continue;
-            if(!( fabs(elp->gsfTrack()->dz(PV->position())) < 0.20)) continue;
+            if( !( fabs((-1)*elp->gsfTrack()->dxy(PV.position()))  < 0.1 )) continue;
+            if(!( fabs(elp->gsfTrack()->dz(PV.position())) < 0.20)) continue;
         }
         if(verboseIdFlag_){
             vid::CutFlowResult fullCutFlowData = (*ele_id_cutflow_data)[elp];
@@ -800,8 +853,15 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         lep.pat_particle = *elp;
         lep.flavour = 11;
         lep.type = "electron";
+        lep.mass=m_el;
         MyLeptons.push_back(lep);
     }
+    t_Muons_size = 0;
+    t_Electrons_size = 0;
+    t_Leptons_size = 0;
+    t_Leptons_size = MyElectrons.size() + MyMuons.size();
+    t_Electrons_size = MyElectrons.size();
+    t_Muons_size = MyMuons.size();
 
     bool my_mumu = false;
     bool my_ee = false;
@@ -838,31 +898,36 @@ MiniAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     t_gen_mothers_pt.clear();
 
 
-bool b_thisway = true;
-if(b_thisway){
+    bool b_thisway = true;
+    if(b_thisway){
         MyLepton lep1;
         MyLepton lep2;
+        TLorentzVector l1;
+        TLorentzVector l2;
+        
         std::sort(MyLeptons.begin(),MyLeptons.end(),by_pt());
         if(MyLeptons.size() > 0 ){
             lep1 = MyLeptons[0];
+            l1.SetPtEtaPhiM(lep1.pat_particle.pt(),lep1.pat_particle.eta(),lep1.pat_particle.phi(),lep1.mass);
         }
         if(MyLeptons.size() > 1){
             lep2 = MyLeptons[1];
+            l2.SetPtEtaPhiM(lep2.pat_particle.pt(),lep2.pat_particle.eta(),lep2.pat_particle.phi(),lep2.mass);
         }
         if(ElMu)
         {
             if(MyLeptons.size()>=1 && lep1.pat_particle.pt() > 25 && ((lep1.flavour == 11 && lep2.flavour == 13) || (lep2.flavour == 11 && lep1.flavour == 13))
-                    && (lep1.pat_particle.p4() + lep2.pat_particle.p4()).M() > 20 && lep1.pat_particle.charge()*lep2.pat_particle.charge() == -1 ) my_emu = true ;
+                    && (l1+ l2).M() > 20 && lep1.pat_particle.charge()*lep2.pat_particle.charge() == -1 ) my_emu = true ;
         }
         else if(DiEl)
         {
             if(MyLeptons.size()>=1 && lep1.pat_particle.pt() > 25 && ((lep1.flavour == 11 && lep2.flavour == 11) || (lep2.flavour == 11 && lep1.flavour == 11))
-                    && (lep1.pat_particle.p4() + lep2.pat_particle.p4()).M() > 20 && lep1.pat_particle.charge()*lep2.pat_particle.charge() == -1 ) my_ee = true ;
+                    && (l1 + l2).M() > 20 && lep1.pat_particle.charge()*lep2.pat_particle.charge() == -1 ) my_ee = true ;
         }
         else if(DiMu)
         {
             if(MyLeptons.size()>=1 && lep1.pat_particle.pt() > 25 && ((lep1.flavour == 13 && lep2.flavour == 13) || (lep2.flavour == 13 && lep1.flavour == 13))
-                    && (lep1.pat_particle.p4() + lep2.pat_particle.p4()).M() > 20 && lep1.pat_particle.charge()*lep2.pat_particle.charge() == -1 ) my_mumu = true ;
+                    && (l1 + l2).M() > 20 && lep1.pat_particle.charge()*lep2.pat_particle.charge() == -1 ) my_mumu = true ;
         }
         else
         {
@@ -870,6 +935,7 @@ if(b_thisway){
         }
         if(my_ee)
         {
+            isDiElectron = true;
             if(lep1.pat_particle.charge() > 0)
             {
                 posEl = lep1.pat_particle;
@@ -883,8 +949,8 @@ if(b_thisway){
                 t_Leptons_charge.push_back(posEl.charge());
                 t_Leptons_type.push_back("electron");
                 t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
-                t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV->position()));
-                t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV->position()));
+                t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV.position()));
+                t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV.position()));
 
 
                 if(!isData)
@@ -892,7 +958,7 @@ if(b_thisway){
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -924,15 +990,15 @@ if(b_thisway){
                 t_Leptons_charge.push_back(negEl.charge());
                 t_Leptons_type.push_back("electron");
                 t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
-                t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV->position()));
-                t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV->position()));
+                t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV.position()));
+                t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV.position()));
 
                 if(!isData)
                 {
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -972,8 +1038,8 @@ if(b_thisway){
                 t_Leptons_charge.push_back(posEl.charge());
                 t_Leptons_type.push_back("electron");
                 t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
-                t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV->position()));
-                t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV->position()));
+                t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV.position()));
+                t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV.position()));
 
 
                 if(!isData)
@@ -981,7 +1047,7 @@ if(b_thisway){
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1013,15 +1079,15 @@ if(b_thisway){
                 t_Leptons_charge.push_back(negEl.charge());
                 t_Leptons_type.push_back("electron");
                 t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
-                t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV->position()));
-                t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV->position()));
+                t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV.position()));
+                t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV.position()));
 
                 if(!isData)
                 {
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1052,6 +1118,7 @@ if(b_thisway){
         }
         else if(my_mumu)
         {
+            isDiMuon = true;
             if(lep1.pat_particle.charge() > 0)
             {
                 posMu = lep1.pat_particle;
@@ -1070,7 +1137,7 @@ if(b_thisway){
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posMu, genColl,13);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1108,7 +1175,7 @@ if(b_thisway){
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1152,7 +1219,7 @@ if(b_thisway){
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posMu, genColl,13);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1190,7 +1257,7 @@ if(b_thisway){
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1218,8 +1285,11 @@ if(b_thisway){
         }
         else if(my_emu)
         {
+
+
             if(lep1.pat_particle.charge() > 0 && lep1.flavour == 11)
             {
+                isElMu = true;
                 posEl = lep1.pat_particle;
                 isPosEl = true;
                 t_Leptons.push_back(posEl.p4());
@@ -1231,8 +1301,8 @@ if(b_thisway){
                 t_Leptons_charge.push_back(posEl.charge());
                 t_Leptons_type.push_back("electron");
                 t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
-                t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV->position()));
-                t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV->position()));
+                t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV.position()));
+                t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV.position()));
 
 
                 if(!isData)
@@ -1240,7 +1310,7 @@ if(b_thisway){
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1277,7 +1347,7 @@ if(b_thisway){
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1306,6 +1376,7 @@ if(b_thisway){
             }
             else if(lep1.pat_particle.charge() > 0 && lep1.flavour == 13)
             {
+                isMuEl = true;
                 posMu = lep1.pat_particle;
                 isPosMu = true;
                 t_Leptons.push_back(posMu.p4());
@@ -1322,7 +1393,7 @@ if(b_thisway){
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posMu, genColl,13);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1355,15 +1426,15 @@ if(b_thisway){
                 t_Leptons_charge.push_back(negEl.charge());
                 t_Leptons_type.push_back("electron");
                 t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
-                t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV->position()));
-                t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV->position()));
+                t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV.position()));
+                t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV.position()));
 
                 if(!isData)
                 {
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1391,8 +1462,51 @@ if(b_thisway){
 
 
             }
-            else if(lep2.pat_particle.charge() > 0 && lep2.flavour == 13)
+
+            else if(lep1.pat_particle.charge() < 0 && lep1.flavour == 11)
             {
+                isMuEl = true;
+                negEl = lep1.pat_particle;
+                isNegEl = true;
+                t_Leptons.push_back(negEl.p4());
+
+                t_Leptons_pt.push_back(negEl.pt());
+                t_Leptons_eta.push_back(negEl.eta());
+                t_Leptons_phi.push_back(negEl.phi());
+                t_Leptons_e.push_back(negEl.energy());
+                t_Leptons_charge.push_back(negEl.charge());
+                t_Leptons_type.push_back("electron");
+                t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
+                t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV.position()));
+                t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV.position()));
+
+
+                if(!isData)
+                {
+                    const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
+
+                    const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                    t_gen_Leptons_pt.push_back(matched.pt());
+                    t_gen_Leptons_eta.push_back(matched.eta());
+                    t_gen_Leptons_phi.push_back(matched.phi());
+                    t_gen_Leptons_e.push_back(matched.energy());
+                    t_gen_Leptons_id.push_back(matched.pdgId());
+                    t_gen_Leptons_charge.push_back(matched.charge());
+
+                    t_gen_daughters_pt.push_back(daughter.pt());
+                    t_gen_daughters_eta.push_back(daughter.eta());
+                    t_gen_daughters_phi.push_back(daughter.phi());
+                    t_gen_daughters_e.push_back(daughter.energy());
+                    t_gen_daughters_id.push_back(daughter.pdgId());
+
+                    t_gen_mothers_pt.push_back(mom.pt());
+                    t_gen_mothers_eta.push_back(mom.eta());
+                    t_gen_mothers_phi.push_back(mom.phi());
+                    t_gen_mothers_e.push_back(mom.energy());
+                    t_gen_mothers_id.push_back(mom.pdgId());
+                }
                 posMu = lep2.pat_particle;
                 isPosMu = true;
                 t_Leptons.push_back(posMu.p4());
@@ -1409,48 +1523,7 @@ if(b_thisway){
                     const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posMu, genColl,13);
 
                     const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
-
-                    t_gen_Leptons_pt.push_back(matched.pt());
-                    t_gen_Leptons_eta.push_back(matched.eta());
-                    t_gen_Leptons_phi.push_back(matched.phi());
-                    t_gen_Leptons_e.push_back(matched.energy());
-                    t_gen_Leptons_id.push_back(matched.pdgId());
-                    t_gen_Leptons_charge.push_back(matched.charge());
-
-                    t_gen_daughters_pt.push_back(daughter.pt());
-                    t_gen_daughters_eta.push_back(daughter.eta());
-                    t_gen_daughters_phi.push_back(daughter.phi());
-                    t_gen_daughters_e.push_back(daughter.energy());
-                    t_gen_daughters_id.push_back(daughter.pdgId());
-
-                    t_gen_mothers_pt.push_back(mom.pt());
-                    t_gen_mothers_eta.push_back(mom.eta());
-                    t_gen_mothers_phi.push_back(mom.phi());
-                    t_gen_mothers_e.push_back(mom.energy());
-                    t_gen_mothers_id.push_back(mom.pdgId());
-
-                }
-                negEl = lep1.pat_particle;
-                isNegEl = true;
-                t_Leptons.push_back(negEl.p4());
-
-                t_Leptons_pt.push_back(negEl.pt());
-                t_Leptons_eta.push_back(negEl.eta());
-                t_Leptons_phi.push_back(negEl.phi());
-                t_Leptons_e.push_back(negEl.energy());
-                t_Leptons_charge.push_back(negEl.charge());
-                t_Leptons_type.push_back("electron");
-                t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
-                t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV->position()));
-                t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV->position()));
-
-                if(!isData)
-                {
-                    const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
-
-                    const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
                     t_gen_Leptons_pt.push_back(matched.pt());
                     t_gen_Leptons_eta.push_back(matched.eta());
@@ -1474,670 +1547,667 @@ if(b_thisway){
 
 
                 }
-
-
-
             }
-            if(lep2.pat_particle.charge() > 0 && lep2.flavour == 11)
-            {
-                posEl = lep2.pat_particle;
-                isPosEl = true;
-                t_Leptons.push_back(posEl.p4());
 
-                t_Leptons_pt.push_back(posEl.pt());
-                t_Leptons_eta.push_back(posEl.eta());
-                t_Leptons_phi.push_back(posEl.phi());
-                t_Leptons_e.push_back(posEl.energy());
-                t_Leptons_charge.push_back(posEl.charge());
-                t_Leptons_type.push_back("electron");
-                t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
-                t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV->position()));
-                t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV->position()));
-
-
-                if(!isData)
+                else if(lep1.pat_particle.charge() < 0 && lep1.flavour == 13)
                 {
-                    const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
+                    isElMu = true;
+                    negMu = lep1.pat_particle;
+                    isNegMu = true;
+                    t_Leptons.push_back(negMu.p4());
 
-                    const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
+                    t_Leptons_pt.push_back(negMu.pt());
+                    t_Leptons_eta.push_back(negMu.eta());
+                    t_Leptons_phi.push_back(negMu.phi());
+                    t_Leptons_e.push_back(negMu.energy());
+                    t_Leptons_charge.push_back(negMu.charge());
+                    t_Leptons_type.push_back("muon");
 
-                    t_gen_Leptons_pt.push_back(matched.pt());
-                    t_gen_Leptons_eta.push_back(matched.eta());
-                    t_gen_Leptons_phi.push_back(matched.phi());
-                    t_gen_Leptons_e.push_back(matched.energy());
-                    t_gen_Leptons_id.push_back(matched.pdgId());
-                    t_gen_Leptons_charge.push_back(matched.charge());
+                    if(!isData)
+                    {
+                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
 
-                    t_gen_daughters_pt.push_back(daughter.pt());
-                    t_gen_daughters_eta.push_back(daughter.eta());
-                    t_gen_daughters_phi.push_back(daughter.phi());
-                    t_gen_daughters_e.push_back(daughter.energy());
-                    t_gen_daughters_id.push_back(daughter.pdgId());
+                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                        const reco::GenParticle mom = mse::getMotherPacked(daughter);
 
-                    t_gen_mothers_pt.push_back(mom.pt());
-                    t_gen_mothers_eta.push_back(mom.eta());
-                    t_gen_mothers_phi.push_back(mom.phi());
-                    t_gen_mothers_e.push_back(mom.energy());
-                    t_gen_mothers_id.push_back(mom.pdgId());
+                        t_gen_Leptons_pt.push_back(matched.pt());
+                        t_gen_Leptons_eta.push_back(matched.eta());
+                        t_gen_Leptons_phi.push_back(matched.phi());
+                        t_gen_Leptons_e.push_back(matched.energy());
+                        t_gen_Leptons_id.push_back(matched.pdgId());
+                        t_gen_Leptons_charge.push_back(matched.charge());
+
+                        t_gen_daughters_pt.push_back(daughter.pt());
+                        t_gen_daughters_eta.push_back(daughter.eta());
+                        t_gen_daughters_phi.push_back(daughter.phi());
+                        t_gen_daughters_e.push_back(daughter.energy());
+                        t_gen_daughters_id.push_back(daughter.pdgId());
+
+                        t_gen_mothers_pt.push_back(mom.pt());
+                        t_gen_mothers_eta.push_back(mom.eta());
+                        t_gen_mothers_phi.push_back(mom.phi());
+                        t_gen_mothers_e.push_back(mom.energy());
+                        t_gen_mothers_id.push_back(mom.pdgId());
+
+                    }
+                    posEl = lep2.pat_particle;
+                    isPosEl = true;
+                    t_Leptons.push_back(posEl.p4());
+
+                    t_Leptons_pt.push_back(posEl.pt());
+                    t_Leptons_eta.push_back(posEl.eta());
+                    t_Leptons_phi.push_back(posEl.phi());
+                    t_Leptons_e.push_back(posEl.energy());
+                    t_Leptons_charge.push_back(posEl.charge());
+                    t_Leptons_type.push_back("electron");
+                    t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
+                    t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV.position()));
+                    t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV.position()));
+
+                    if(!isData)
+                    {
+                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
+
+                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                        const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                        t_gen_Leptons_pt.push_back(matched.pt());
+                        t_gen_Leptons_eta.push_back(matched.eta());
+                        t_gen_Leptons_phi.push_back(matched.phi());
+                        t_gen_Leptons_e.push_back(matched.energy());
+                        t_gen_Leptons_id.push_back(matched.pdgId());
+                        t_gen_Leptons_charge.push_back(matched.charge());
+
+                        t_gen_daughters_pt.push_back(daughter.pt());
+                        t_gen_daughters_eta.push_back(daughter.eta());
+                        t_gen_daughters_phi.push_back(daughter.phi());
+                        t_gen_daughters_e.push_back(daughter.energy());
+                        t_gen_daughters_id.push_back(daughter.pdgId());
+
+                        t_gen_mothers_pt.push_back(mom.pt());
+                        t_gen_mothers_eta.push_back(mom.eta());
+                        t_gen_mothers_phi.push_back(mom.phi());
+                        t_gen_mothers_e.push_back(mom.energy());
+                        t_gen_mothers_id.push_back(mom.pdgId());
+
+
+
+                    }
+
+
+
                 }
-                negMu = lep1.pat_particle;
-                isNegMu = true;
-                t_Leptons.push_back(negMu.p4());
 
-                t_Leptons_pt.push_back(negMu.pt());
-                t_Leptons_eta.push_back(negMu.eta());
-                t_Leptons_phi.push_back(negMu.phi());
-                t_Leptons_e.push_back(negMu.energy());
-                t_Leptons_charge.push_back(negMu.charge());
-                t_Leptons_type.push_back("muon");
-
-                if(!isData)
-                {
-                    const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
-
-                    const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                    const reco::GenParticle mom = mse::getMother(daughter);
-
-                    t_gen_Leptons_pt.push_back(matched.pt());
-                    t_gen_Leptons_eta.push_back(matched.eta());
-                    t_gen_Leptons_phi.push_back(matched.phi());
-                    t_gen_Leptons_e.push_back(matched.energy());
-                    t_gen_Leptons_id.push_back(matched.pdgId());
-                    t_gen_Leptons_charge.push_back(matched.charge());
-
-                    t_gen_daughters_pt.push_back(daughter.pt());
-                    t_gen_daughters_eta.push_back(daughter.eta());
-                    t_gen_daughters_phi.push_back(daughter.phi());
-                    t_gen_daughters_e.push_back(daughter.energy());
-                    t_gen_daughters_id.push_back(daughter.pdgId());
-
-                    t_gen_mothers_pt.push_back(mom.pt());
-                    t_gen_mothers_eta.push_back(mom.eta());
-                    t_gen_mothers_phi.push_back(mom.phi());
-                    t_gen_mothers_e.push_back(mom.energy());
-                    t_gen_mothers_id.push_back(mom.pdgId());
-
-
-
-                }
-
-
-            }
 
         }
         else
         {
+            // cout << "Or Else"<< endl;
             return;
         }
-}
-else{
-    //cout << MyElectrons.size() << " Electron size" <<endl;
-
-    if((MyMuons.size() + MyElectrons.size()) >=2)
-    {
-        // select leptons
-        if(MyElectrons.size() == 0) my_mumu = true;
-        else if (MyMuons.size() == 0) my_ee = true;
-        else if (MyElectrons.size() == 1 )
-        {
-            if(MyMuons.size() == 1) my_emu = true;
-            else if (MyElectrons[0].pt() > MyMuons[1].pt()) my_emu = true;
-            else my_mumu = true;
-        }
-        else if (MyElectrons.size() > 1)
-        {
-            if(MyElectrons[1].pt() > MyMuons[0].pt() ) my_ee = true;
-            else if (MyMuons.size() == 1) my_emu = true;
-            else if (MyElectrons[0].pt() > MyMuons[1].pt() ) my_emu = true;
-            else my_mumu = true;
-        }
-        if(my_ee)
-        {
-            if(MyElectrons[0].charge() != MyElectrons[1].charge())
-            {
-                isDiElectron = true;
-                if(MyElectrons[0].charge() > 0)
-                {
-                    posEl = MyElectrons[0];
-                    isPosEl = true;
-                    t_Leptons.push_back(posEl.p4());
-
-                    t_Leptons_pt.push_back(posEl.pt());
-                    t_Leptons_eta.push_back(posEl.eta());
-                    t_Leptons_phi.push_back(posEl.phi());
-                    t_Leptons_e.push_back(posEl.energy());
-                    t_Leptons_charge.push_back(posEl.charge());
-                    t_Leptons_type.push_back("electron");
-                    t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
-                    t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV->position()));
-                    t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV->position()));
-
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-                    }
-                    negEl = MyElectrons[1];
-                    isNegEl = true;
-                    t_Leptons.push_back(negEl.p4());
-
-                    t_Leptons_pt.push_back(negEl.pt());
-                    t_Leptons_eta.push_back(negEl.eta());
-                    t_Leptons_phi.push_back(negEl.phi());
-                    t_Leptons_e.push_back(negEl.energy());
-                    t_Leptons_charge.push_back(negEl.charge());
-                    t_Leptons_type.push_back("electron");
-                    t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
-                    t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV->position()));
-                    t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV->position()));
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-
-
-
-                    }
-
-                }
-                else
-                {
-
-                    posEl = MyElectrons[1];
-                    isPosEl = true;
-                    t_Leptons.push_back(posEl.p4());
-
-                    t_Leptons_pt.push_back(posEl.pt());
-                    t_Leptons_eta.push_back(posEl.eta());
-                    t_Leptons_phi.push_back(posEl.phi());
-                    t_Leptons_e.push_back(posEl.energy());
-                    t_Leptons_charge.push_back(posEl.charge());
-                    t_Leptons_type.push_back("electron");
-                    t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
-                    t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV->position()));
-                    t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV->position()));
-
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-                    }
-                    negEl = MyElectrons[0];
-                    isNegEl = true;
-                    t_Leptons.push_back(negEl.p4());
-
-                    t_Leptons_pt.push_back(negEl.pt());
-                    t_Leptons_eta.push_back(negEl.eta());
-                    t_Leptons_phi.push_back(negEl.phi());
-                    t_Leptons_e.push_back(negEl.energy());
-                    t_Leptons_charge.push_back(negEl.charge());
-                    t_Leptons_type.push_back("electron");
-                    t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
-                    t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV->position()));
-                    t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV->position()));
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-
-
-
-                    }
-
-
-                }
-
-            }
-        }
-        else if (my_emu)
-        {
-            if(MyElectrons[0].charge() != MyMuons[0].charge() )
-            {
-                isElMu = true ;
-                isMuEl = true;
-                if(MyElectrons[0].charge() > 0)
-                {
-                    posEl = MyElectrons[0];
-                    isPosEl = true;
-                    t_Leptons.push_back(posEl.p4());
-
-                    t_Leptons_pt.push_back(posEl.pt());
-                    t_Leptons_eta.push_back(posEl.eta());
-                    t_Leptons_phi.push_back(posEl.phi());
-                    t_Leptons_e.push_back(posEl.energy());
-                    t_Leptons_charge.push_back(posEl.charge());
-                    t_Leptons_type.push_back("electron");
-                    t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
-                    t_Leptons_d0.push_back(posEl.gsfTrack()->d0());
-                    t_Leptons_dz.push_back(posEl.gsfTrack()->dz());
-
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-                    }
-                    negMu = MyMuons[0];
-                    isNegMu = true;
-                    t_Leptons.push_back(negMu.p4());
-
-                    t_Leptons_pt.push_back(negMu.pt());
-                    t_Leptons_eta.push_back(negMu.eta());
-                    t_Leptons_phi.push_back(negMu.phi());
-                    t_Leptons_e.push_back(negMu.energy());
-                    t_Leptons_charge.push_back(negMu.charge());
-                    t_Leptons_type.push_back("muon");
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-
-
-
-                    }
-
-
-                }
-                else
-                {
-                    posMu = MyMuons[0];
-                    isPosMu = true;
-                    t_Leptons.push_back(posMu.p4());
-
-                    t_Leptons_pt.push_back(posMu.pt());
-                    t_Leptons_eta.push_back(posMu.eta());
-                    t_Leptons_phi.push_back(posMu.phi());
-                    t_Leptons_e.push_back(posMu.energy());
-                    t_Leptons_charge.push_back(posMu.charge());
-                    t_Leptons_type.push_back("muon");
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posMu, genColl,13);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-
-                    }
-                    negEl = MyElectrons[0];
-                    isNegEl = true;
-                    t_Leptons.push_back(negEl.p4());
-
-                    t_Leptons_pt.push_back(negEl.pt());
-                    t_Leptons_eta.push_back(negEl.eta());
-                    t_Leptons_phi.push_back(negEl.phi());
-                    t_Leptons_e.push_back(negEl.energy());
-                    t_Leptons_charge.push_back(negEl.charge());
-                    t_Leptons_type.push_back("electron");
-                    t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
-                    t_Leptons_d0.push_back(negEl.gsfTrack()->d0());
-                    t_Leptons_dz.push_back(negEl.gsfTrack()->dz());
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-
-
-
-                    }
-
-
-
-                }
-            }
-        }
-        else if (my_mumu)
-        {
-            if(MyMuons[0].charge() != MyMuons[1].charge() )
-            {
-                isDiMuon = true;
-                if(MyMuons[0].charge() > 0)
-                {
-                    posMu = MyMuons[0];
-                    isPosMu = true;
-                    t_Leptons.push_back(posMu.p4());
-
-                    t_Leptons_pt.push_back(posMu.pt());
-                    t_Leptons_eta.push_back(posMu.eta());
-                    t_Leptons_phi.push_back(posMu.phi());
-                    t_Leptons_e.push_back(posMu.energy());
-                    t_Leptons_charge.push_back(posMu.charge());
-                    t_Leptons_type.push_back("muon");
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posMu, genColl,13);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-
-                    }
-                    negMu = MyMuons[1];
-                    isNegMu = true;
-                    t_Leptons.push_back(negMu.p4());
-
-                    t_Leptons_pt.push_back(negMu.pt());
-                    t_Leptons_eta.push_back(negMu.eta());
-                    t_Leptons_phi.push_back(negMu.phi());
-                    t_Leptons_e.push_back(negMu.energy());
-                    t_Leptons_charge.push_back(negMu.charge());
-                    t_Leptons_type.push_back("muon");
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-
-
-
-                    }
-
-                }
-                else
-                {
-                    posMu = MyMuons[1];
-                    isPosMu = true;
-                    t_Leptons.push_back(posMu.p4());
-
-                    t_Leptons_pt.push_back(posMu.pt());
-                    t_Leptons_eta.push_back(posMu.eta());
-                    t_Leptons_phi.push_back(posMu.phi());
-                    t_Leptons_e.push_back(posMu.energy());
-                    t_Leptons_charge.push_back(posMu.charge());
-                    t_Leptons_type.push_back("muon");
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posMu, genColl,13);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-
-                    }
-                    negMu = MyMuons[0];
-                    isNegMu = true;
-                    t_Leptons.push_back(negMu.p4());
-
-                    t_Leptons_pt.push_back(negMu.pt());
-                    t_Leptons_eta.push_back(negMu.eta());
-                    t_Leptons_phi.push_back(negMu.phi());
-                    t_Leptons_e.push_back(negMu.energy());
-                    t_Leptons_charge.push_back(negMu.charge());
-                    t_Leptons_type.push_back("muon");
-
-                    if(!isData)
-                    {
-                        const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
-
-                        const reco::GenParticle daughter = mse::getMotherPacked(matched);
-                        const reco::GenParticle mom = mse::getMother(daughter);
-
-                        t_gen_Leptons_pt.push_back(matched.pt());
-                        t_gen_Leptons_eta.push_back(matched.eta());
-                        t_gen_Leptons_phi.push_back(matched.phi());
-                        t_gen_Leptons_e.push_back(matched.energy());
-                        t_gen_Leptons_id.push_back(matched.pdgId());
-                        t_gen_Leptons_charge.push_back(matched.charge());
-
-                        t_gen_daughters_pt.push_back(daughter.pt());
-                        t_gen_daughters_eta.push_back(daughter.eta());
-                        t_gen_daughters_phi.push_back(daughter.phi());
-                        t_gen_daughters_e.push_back(daughter.energy());
-                        t_gen_daughters_id.push_back(daughter.pdgId());
-
-                        t_gen_mothers_pt.push_back(mom.pt());
-                        t_gen_mothers_eta.push_back(mom.eta());
-                        t_gen_mothers_phi.push_back(mom.phi());
-                        t_gen_mothers_e.push_back(mom.energy());
-                        t_gen_mothers_id.push_back(mom.pdgId());
-
-
-
-                    }
-                }
-            }
-        }
     }
+    else{
+//        cout << MyElectrons.size() << " Electron size" <<endl;
+
+        if((MyMuons.size() + MyElectrons.size()) >=2)
+        {
+            // select leptons
+            if(MyElectrons.size() == 0) my_mumu = true;
+            else if (MyMuons.size() == 0) my_ee = true;
+            else if (MyElectrons.size() == 1 )
+            {
+                if(MyMuons.size() == 1) my_emu = true;
+                else if (MyElectrons[0].pt() > MyMuons[1].pt()) my_emu = true;
+                else my_mumu = true;
+            }
+            else if (MyElectrons.size() > 1)
+            {
+                if(MyElectrons[1].pt() > MyMuons[0].pt() ) my_ee = true;
+                else if (MyMuons.size() == 1) my_emu = true;
+                else if (MyElectrons[0].pt() > MyMuons[1].pt() ) my_emu = true;
+                else my_mumu = true;
+            }
+            if(my_ee)
+            {
+                if(MyElectrons[0].charge() != MyElectrons[1].charge())
+                {
+                    isDiElectron = true;
+                    if(MyElectrons[0].charge() > 0)
+                    {
+                        posEl = MyElectrons[0];
+                        isPosEl = true;
+                        t_Leptons.push_back(posEl.p4());
+
+                        t_Leptons_pt.push_back(posEl.pt());
+                        t_Leptons_eta.push_back(posEl.eta());
+                        t_Leptons_phi.push_back(posEl.phi());
+                        t_Leptons_e.push_back(posEl.energy());
+                        t_Leptons_charge.push_back(posEl.charge());
+                        t_Leptons_type.push_back("electron");
+                        t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
+                        t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV.position()));
+                        t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV.position()));
+
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+                        }
+                        negEl = MyElectrons[1];
+                        isNegEl = true;
+                        t_Leptons.push_back(negEl.p4());
+
+                        t_Leptons_pt.push_back(negEl.pt());
+                        t_Leptons_eta.push_back(negEl.eta());
+                        t_Leptons_phi.push_back(negEl.phi());
+                        t_Leptons_e.push_back(negEl.energy());
+                        t_Leptons_charge.push_back(negEl.charge());
+                        t_Leptons_type.push_back("electron");
+                        t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
+                        t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV.position()));
+                        t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV.position()));
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+
+
+
+                        }
+
+                    }
+                    else
+                    {
+
+                        posEl = MyElectrons[1];
+                        isPosEl = true;
+                        t_Leptons.push_back(posEl.p4());
+
+                        t_Leptons_pt.push_back(posEl.pt());
+                        t_Leptons_eta.push_back(posEl.eta());
+                        t_Leptons_phi.push_back(posEl.phi());
+                        t_Leptons_e.push_back(posEl.energy());
+                        t_Leptons_charge.push_back(posEl.charge());
+                        t_Leptons_type.push_back("electron");
+                        t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
+                        t_Leptons_d0.push_back(posEl.gsfTrack()->dxy(PV.position()));
+                        t_Leptons_dz.push_back(posEl.gsfTrack()->dz(PV.position()));
+
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+                        }
+                        negEl = MyElectrons[0];
+                        isNegEl = true;
+                        t_Leptons.push_back(negEl.p4());
+
+                        t_Leptons_pt.push_back(negEl.pt());
+                        t_Leptons_eta.push_back(negEl.eta());
+                        t_Leptons_phi.push_back(negEl.phi());
+                        t_Leptons_e.push_back(negEl.energy());
+                        t_Leptons_charge.push_back(negEl.charge());
+                        t_Leptons_type.push_back("electron");
+                        t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
+                        t_Leptons_d0.push_back(negEl.gsfTrack()->dxy(PV.position()));
+                        t_Leptons_dz.push_back(negEl.gsfTrack()->dz(PV.position()));
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+
+
+
+                        }
+
+
+                    }
+
+                }
+            }
+            else if (my_emu)
+            {
+                if(MyElectrons[0].charge() != MyMuons[0].charge() )
+                {
+                    isElMu = true ;
+                    isMuEl = true;
+                    if(MyElectrons[0].charge() > 0)
+                    {
+                        posEl = MyElectrons[0];
+                        isPosEl = true;
+                        t_Leptons.push_back(posEl.p4());
+
+                        t_Leptons_pt.push_back(posEl.pt());
+                        t_Leptons_eta.push_back(posEl.eta());
+                        t_Leptons_phi.push_back(posEl.phi());
+                        t_Leptons_e.push_back(posEl.energy());
+                        t_Leptons_charge.push_back(posEl.charge());
+                        t_Leptons_type.push_back("electron");
+                        t_Leptons_etaSC.push_back(posEl.superCluster()->eta());
+                        t_Leptons_d0.push_back(posEl.gsfTrack()->d0());
+                        t_Leptons_dz.push_back(posEl.gsfTrack()->dz());
+
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posEl, genColl,11);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+                        }
+                        negMu = MyMuons[0];
+                        isNegMu = true;
+                        t_Leptons.push_back(negMu.p4());
+
+                        t_Leptons_pt.push_back(negMu.pt());
+                        t_Leptons_eta.push_back(negMu.eta());
+                        t_Leptons_phi.push_back(negMu.phi());
+                        t_Leptons_e.push_back(negMu.energy());
+                        t_Leptons_charge.push_back(negMu.charge());
+                        t_Leptons_type.push_back("muon");
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+
+
+
+                        }
+
+
+                    }
+                    else
+                    {
+                        posMu = MyMuons[0];
+                        isPosMu = true;
+                        t_Leptons.push_back(posMu.p4());
+
+                        t_Leptons_pt.push_back(posMu.pt());
+                        t_Leptons_eta.push_back(posMu.eta());
+                        t_Leptons_phi.push_back(posMu.phi());
+                        t_Leptons_e.push_back(posMu.energy());
+                        t_Leptons_charge.push_back(posMu.charge());
+                        t_Leptons_type.push_back("muon");
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posMu, genColl,13);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+
+                        }
+                        negEl = MyElectrons[0];
+                        isNegEl = true;
+                        t_Leptons.push_back(negEl.p4());
+
+                        t_Leptons_pt.push_back(negEl.pt());
+                        t_Leptons_eta.push_back(negEl.eta());
+                        t_Leptons_phi.push_back(negEl.phi());
+                        t_Leptons_e.push_back(negEl.energy());
+                        t_Leptons_charge.push_back(negEl.charge());
+                        t_Leptons_type.push_back("electron");
+                        t_Leptons_etaSC.push_back(negEl.superCluster()->eta());
+                        t_Leptons_d0.push_back(negEl.gsfTrack()->d0());
+                        t_Leptons_dz.push_back(negEl.gsfTrack()->dz());
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negEl, genColl,11);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+
+
+
+                        }
+
+
+
+                    }
+                }
+            }
+            else if (my_mumu)
+            {
+                if(MyMuons[0].charge() != MyMuons[1].charge() )
+                {
+                    isDiMuon = true;
+                    if(MyMuons[0].charge() > 0)
+                    {
+                        posMu = MyMuons[0];
+                        isPosMu = true;
+                        t_Leptons.push_back(posMu.p4());
+
+                        t_Leptons_pt.push_back(posMu.pt());
+                        t_Leptons_eta.push_back(posMu.eta());
+                        t_Leptons_phi.push_back(posMu.phi());
+                        t_Leptons_e.push_back(posMu.energy());
+                        t_Leptons_charge.push_back(posMu.charge());
+                        t_Leptons_type.push_back("muon");
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posMu, genColl,13);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+
+                        }
+                        negMu = MyMuons[1];
+                        isNegMu = true;
+                        t_Leptons.push_back(negMu.p4());
+
+                        t_Leptons_pt.push_back(negMu.pt());
+                        t_Leptons_eta.push_back(negMu.eta());
+                        t_Leptons_phi.push_back(negMu.phi());
+                        t_Leptons_e.push_back(negMu.energy());
+                        t_Leptons_charge.push_back(negMu.charge());
+                        t_Leptons_type.push_back("muon");
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+
+
+
+                        }
+
+                    }
+                    else
+                    {
+                        posMu = MyMuons[1];
+                        isPosMu = true;
+                        t_Leptons.push_back(posMu.p4());
+
+                        t_Leptons_pt.push_back(posMu.pt());
+                        t_Leptons_eta.push_back(posMu.eta());
+                        t_Leptons_phi.push_back(posMu.phi());
+                        t_Leptons_e.push_back(posMu.energy());
+                        t_Leptons_charge.push_back(posMu.charge());
+                        t_Leptons_type.push_back("muon");
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(posMu, genColl,13);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+
+                        }
+                        negMu = MyMuons[0];
+                        isNegMu = true;
+                        t_Leptons.push_back(negMu.p4());
+
+                        t_Leptons_pt.push_back(negMu.pt());
+                        t_Leptons_eta.push_back(negMu.eta());
+                        t_Leptons_phi.push_back(negMu.phi());
+                        t_Leptons_e.push_back(negMu.energy());
+                        t_Leptons_charge.push_back(negMu.charge());
+                        t_Leptons_type.push_back("muon");
+
+                        if(!isData)
+                        {
+                            const pat::PackedGenParticle matched = mse::getMatchedGenParticle(negMu, genColl,13);
+
+                            const reco::GenParticle daughter = mse::getMotherPacked(matched);
+                            const reco::GenParticle mom = mse::getMotherPacked(daughter);
+
+                            t_gen_Leptons_pt.push_back(matched.pt());
+                            t_gen_Leptons_eta.push_back(matched.eta());
+                            t_gen_Leptons_phi.push_back(matched.phi());
+                            t_gen_Leptons_e.push_back(matched.energy());
+                            t_gen_Leptons_id.push_back(matched.pdgId());
+                            t_gen_Leptons_charge.push_back(matched.charge());
+
+                            t_gen_daughters_pt.push_back(daughter.pt());
+                            t_gen_daughters_eta.push_back(daughter.eta());
+                            t_gen_daughters_phi.push_back(daughter.phi());
+                            t_gen_daughters_e.push_back(daughter.energy());
+                            t_gen_daughters_id.push_back(daughter.pdgId());
+
+                            t_gen_mothers_pt.push_back(mom.pt());
+                            t_gen_mothers_eta.push_back(mom.eta());
+                            t_gen_mothers_phi.push_back(mom.phi());
+                            t_gen_mothers_e.push_back(mom.energy());
+                            t_gen_mothers_id.push_back(mom.pdgId());
+
+
+
+                        }
+                    }
+                }
+            }
+        }
     }
     //cout << my_ee + my_emu + my_mumu << " what is the number ! " <<endl;
-    t_Muons_size = 0;
-    t_Electrons_size = 0;
-    t_Leptons_size = 0;
-    t_Leptons_size = MyElectrons.size() + MyMuons.size();
-    t_Electrons_size = MyElectrons.size();
-    t_Muons_size = MyMuons.size();
+
     //   if(DiMu && !isDiMuon) return;
     //   if(DiEl && !isDiElectron) return;
     //   if(ElMu && !(isElMu || isMuEl) ) return;
@@ -2148,7 +2218,7 @@ else{
     if(isPosEl && isNegEl) isDiElectron = true;
     if( isPosEl && isNegMu)  isElMu = true;
     if( isNegEl && isPosMu ) isMuEl = true;
-    if(isDiMuon || isDiElectron || isElMu ) isDiLeptonic = true;
+    if(isDiMuon || isDiElectron || isElMu || isMuEl) isDiLeptonic = true;
     if(!isDiLeptonic)return;
     if(DiMu && !isDiMuon) return;
     if(DiEl && !isDiElectron) return;
@@ -2205,9 +2275,9 @@ else{
         if(!looseJetID)continue;
         if(isDiMuon)
         {
-            LorentzVector jetp4(jet_it->p4());
-            LorentzVector mupp4(posMu.p4());
-            LorentzVector mump4(negMu.p4());
+           myLorentzVector jetp4(jet_it->p4());
+           myLorentzVector mupp4(posMu.p4());
+           myLorentzVector mump4(negMu.p4());
             double dr1 = ROOT::Math::VectorUtil::DeltaR(jetp4,mupp4);
             double dr2 = ROOT::Math::VectorUtil::DeltaR(jetp4,mump4);
             if(dr1 < 0.4 || dr2 < 0.4 ) continue;
@@ -2215,27 +2285,27 @@ else{
 
         if(isDiElectron)
         {
-            LorentzVector jetp4(jet_it->p4());
-            LorentzVector mupp4(posEl.p4());
-            LorentzVector mump4(negEl.p4());
+           myLorentzVector jetp4(jet_it->p4());
+           myLorentzVector mupp4(posEl.p4());
+           myLorentzVector mump4(negEl.p4());
             double dr1 = ROOT::Math::VectorUtil::DeltaR(jetp4,mupp4);
             double dr2 = ROOT::Math::VectorUtil::DeltaR(jetp4,mump4);
             if(dr1 < 0.4 || dr2 < 0.4 ) continue;
         }
         if(isElMu)
         {
-            LorentzVector jetp4(jet_it->p4());
-            LorentzVector mupp4(posEl.p4());
-            LorentzVector mump4(negMu.p4());
+           myLorentzVector jetp4(jet_it->p4());
+           myLorentzVector mupp4(posEl.p4());
+           myLorentzVector mump4(negMu.p4());
             double dr1 = ROOT::Math::VectorUtil::DeltaR(jetp4,mupp4);
             double dr2 = ROOT::Math::VectorUtil::DeltaR(jetp4,mump4);
             if(dr1 < 0.4 || dr2 < 0.4 ) continue;
         }
         if(isMuEl)
         {
-            LorentzVector jetp4(jet_it->p4());
-            LorentzVector mupp4(posMu.p4());
-            LorentzVector mump4(negEl.p4());
+           myLorentzVector jetp4(jet_it->p4());
+           myLorentzVector mupp4(posMu.p4());
+           myLorentzVector mump4(negEl.p4());
             double dr1 = ROOT::Math::VectorUtil::DeltaR(jetp4,mupp4);
             double dr2 = ROOT::Math::VectorUtil::DeltaR(jetp4,mump4);
             if(dr1 < 0.4 || dr2 < 0.4 ) continue;
@@ -2257,6 +2327,7 @@ else{
         t_Jets_phi_resolution.push_back(jet_phi_resolution);
 
         double jer_sf_nominal = jerSF->getScaleFactor({{JME::Binning::JetEta, jet_it->eta()}}, Variation::NOMINAL);
+//cout<<jer_sf_nominal << endl;
         double jer_sf_up = jerSF->getScaleFactor({{JME::Binning::JetEta, jet_it->eta()}}, Variation::UP);
         double jer_sf_down = jerSF->getScaleFactor({{JME::Binning::JetEta, jet_it->eta()}}, Variation::DOWN);
         t_Jets_sf_nominal.push_back(jer_sf_nominal);
@@ -2265,7 +2336,7 @@ else{
 
         if(!isData)
         {
-            LorentzVector jetp4(jet_it->p4());
+           myLorentzVector jetp4(jet_it->p4());
             //                // Try to find a gen jet matching
             //                // dR < m_dR_max
             //                // dPt < m_dPt_max_factor * resolution
@@ -2276,7 +2347,7 @@ else{
             double m_dR_max = 0.2;
             double m_dPt_max_factor = 3;
             for (reco::GenJetCollection::const_iterator it_genJet = genJets->begin(); it_genJet != genJets->end();++it_genJet) {
-                LorentzVector genp4(it_genJet->p4());
+               myLorentzVector genp4(it_genJet->p4());
                 double dR = ROOT::Math::VectorUtil::DeltaR(genp4, jetp4);
 
                 if (dR > min_dR)
@@ -2484,851 +2555,852 @@ else{
     }
     t_num_PV = nGoodVtxs;
     h_NPV->Fill(nGoodVtxs,1);
-   
-    //cout << "IfilltheTree"<<endl;
-    
-    
-    
-    if(bjets.size() >= 2)
-    {
-           //////////////////////TOP RECO/////////////////
-    //    TtDilepEvtSolution asol;
 
-    //    asol.setGenEvt(genEvent);
+    //cout << "IfilltheTree"<<endl;
+
+    
     t_top_pt.clear();
     t_top_eta.clear();
     t_top_phi.clear();
     t_top_e.clear();
-    
+
     t_antitop_pt.clear();
     t_antitop_eta.clear();
     t_antitop_phi.clear();
     t_antitop_e.clear();
-    
+
     t_W_pt.clear();
     t_W_eta.clear();
     t_W_phi.clear();
     t_W_e.clear();
-    
+
     t_antiW_pt.clear();
     t_antiW_eta.clear();
     t_antiW_phi.clear();
     t_antiW_e.clear();
-    
+
     t_nu_pt.clear();
     t_nu_eta.clear();
     t_nu_phi.clear();
     t_nu_e.clear();
-    
+
     t_antinu_pt.clear();
     t_antinu_eta.clear();
     t_antinu_phi.clear();
     t_antinu_e.clear();
     t_cos.clear();
-    
-    
-    ////////DiMuon:
-    if(isDiMuon)
+
+    if(bjets.size() >= 2)
     {
-        //cout << "IM HERE!MuMu" << endl;
-        TLorentzVector W1;
-        TLorentzVector W2;
-        TLorentzVector t1;
-        TLorentzVector t2;
-        TLorentzVector ttbar;
-        TLorentzVector lepPos;
-        TLorentzVector lepNeg;
-        TLorentzVector BJet;
-        TLorentzVector BBJet;
-        TLorentzVector dilepton;
-        lepPos.SetPtEtaPhiE(posMu.pt(),posMu.eta(),posMu.phi(),posMu.energy());
-        lepNeg.SetPtEtaPhiE(negMu.pt(),negMu.eta(),negMu.phi(),negMu.energy());
-        BJet.SetPtEtaPhiE(bjets.at(0).pt(),bjets.at(0).eta(),bjets.at(0).phi(),bjets.at(0).energy());
-        BBJet.SetPtEtaPhiE(bjets.at(1).pt(),bjets.at(1).eta(),bjets.at(1).phi(),bjets.at(1).energy());
-        //        cout << posMu.genParticle()->mother()->pdgId() << endl;
+        //////////////////////TOP RECO/////////////////
+        //    TtDilepEvtSolution asol;
 
-        amwtSolver->SetConstraints(met.px(),met.py());
+        //    asol.setGenEvt(genEvent);
 
-        TtAMWTSolver::NeutrinoSolution nuSol =  amwtSolver->NuSolver(lepPos,lepNeg,BJet,BBJet);
 
-        //        amwtsolver->SetConstraints(met.px(),met.py());
-        //        TtFullLepKinSolver::NeutrinoSolution nuSol= amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
-        // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
-        dilepton = lepPos + lepNeg;
 
-        if(nuSol.neutrino.pt()> 0 && nuSol.neutrinoBar.pt() > 0 )
+        ////////DiMuon:
+        if(isDiMuon)
         {
-            // cout << "what 0" << endl;
-            TLorentzVector nu;
-            TLorentzVector nuBar;
-            nu.SetPtEtaPhiM(nuSol.neutrino.pt(),nuSol.neutrino.eta(),nuSol.neutrino.phi(),nuSol.neutrino.mass());
-            nuBar.SetPtEtaPhiM(nuSol.neutrinoBar.pt(),nuSol.neutrinoBar.eta(),nuSol.neutrinoBar.phi(),nuSol.neutrinoBar.mass());
-            W1 = nu + lepPos;
-            W2 = nuBar + lepNeg;
-            // cout << "what 1" << endl;
-            h_yWMuMu->Fill(W1.Rapidity(),theWeight);
-            h_yWMuMu->Fill(W2.Rapidity(),theWeight);
-            h_yWDiLep->Fill(W1.Rapidity(),theWeight);
-            h_yWDiLep->Fill(W2.Rapidity(),theWeight);
-            h_ptWMuMu->Fill(W1.Pt(),theWeight);
-            h_ptWMuMu->Fill(W2.Pt(),theWeight);
-            h_ptWDiLep->Fill(W1.Pt(),theWeight);
-            h_ptWDiLep->Fill(W2.Pt(),theWeight);
+            //cout << "IM HERE!MuMu" << endl;
+            TLorentzVector W1;
+            TLorentzVector W2;
+            TLorentzVector t1;
+            TLorentzVector t2;
+            TLorentzVector ttbar;
+            TLorentzVector lepPos;
+            TLorentzVector lepNeg;
+            TLorentzVector BJet;
+            TLorentzVector BBJet;
+            TLorentzVector dilepton;
+            lepPos.SetPtEtaPhiE(posMu.pt(),posMu.eta(),posMu.phi(),posMu.energy());
+            lepNeg.SetPtEtaPhiE(negMu.pt(),negMu.eta(),negMu.phi(),negMu.energy());
+            BJet.SetPtEtaPhiE(bjets.at(0).pt(),bjets.at(0).eta(),bjets.at(0).phi(),bjets.at(0).energy());
+            BBJet.SetPtEtaPhiE(bjets.at(1).pt(),bjets.at(1).eta(),bjets.at(1).phi(),bjets.at(1).energy());
+            //        cout << posMu.genParticle()->mother()->pdgId() << endl;
 
-            t1 = W1 + BJet;
-            t2 = W2 + BBJet;
-            ttbar = t1 + t2;
-            // cout << "what 2" << endl;
-            h_yTMuMu->Fill(t1.Rapidity(),theWeight);
-            h_yTMuMu->Fill(t2.Rapidity(),theWeight);
-            h_yTDiLep->Fill(t1.Rapidity(),theWeight);
-            h_yTDiLep->Fill(t2.Rapidity(),theWeight);
-            h_ptTMuMu->Fill(t1.Pt(),theWeight);
-            h_ptTMuMu->Fill(t2.Pt(),theWeight);
-            h_ptTDiLep->Fill(t1.Pt(),theWeight);
-            h_ptTDiLep->Fill(t2.Pt(),theWeight);
-            h_mTTbarMuMu->Fill(ttbar.M(),theWeight);
-            h_TTbarM->Fill(ttbar.M(),theWeight);
+            amwtSolver->SetConstraints(met.px(),met.py());
 
-            t_antinu.push_back(LorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
-            t_antinu_pt.push_back(nuBar.Pt());
-            t_antinu_eta.push_back(nuBar.Eta());
-            t_antinu_phi.push_back(nuBar.Phi());
-            t_antinu_e.push_back(nuBar.E());
-            t_nu.push_back(LorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
-            t_nu_pt.push_back(nu.Pt());
-            t_nu_eta.push_back(nu.Eta());
-            t_nu_phi.push_back(nu.Phi());
-            t_nu_e.push_back(nu.E());
-            t_antiW.push_back(LorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
-            t_antiW_pt.push_back(W2.Pt());
-            t_antiW_eta.push_back(W2.Eta());
-            t_antiW_phi.push_back(W2.Phi());
-            t_antiW_e.push_back(W2.E());
-            t_W.push_back(LorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
-            t_W_pt.push_back(W1.Pt());
-            t_W_eta.push_back(W1.Eta());
-            t_W_phi.push_back(W1.Phi());
-            t_W_e.push_back(W1.E());
-            t_antitop.push_back(LorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
-            t_antitop_pt.push_back(t2.Pt());
-            t_antitop_eta.push_back(t2.Eta());
-            t_antitop_phi.push_back(t2.Phi());
-            t_antitop_e.push_back(t2.E());
-            t_top.push_back(LorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
-            t_top_pt.push_back(t1.Pt());
-            t_top_eta.push_back(t1.Eta());
-            t_top_phi.push_back(t1.Phi());
-            t_top_e.push_back(t1.E());
+            TtAMWTSolver::NeutrinoSolution nuSol =  amwtSolver->NuSolver(lepPos,lepNeg,BJet,BBJet);
 
-            //++n_afterTop;
-            h_Nevents_top->Fill(1,theWeight);
-            h_NeventsMuMu_top->Fill(1,theWeight);
-            RecoMTT.push_back(ttbar.M());
-            RecoMTTMuMu.push_back(ttbar.M());
+            //        amwtsolver->SetConstraints(met.px(),met.py());
+            //        TtFullLepKinSolver::NeutrinoSolution nuSol= amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
+            // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
+            dilepton = lepPos + lepNeg;
 
-
-            lepPos.Boost(-W1.BoostVector());
-            W1.Boost(-t1.BoostVector());
-            float theta1 = (W1.Angle(lepPos.Vect()));
-            RecoCos.push_back(TMath::Cos(theta1));
-            //            RecoCos.push_back(theta1);
-            RecoCosMuMu.push_back(TMath::Cos(theta1));
-            h_cosMuMu->Fill(TMath::Cos(theta1),theWeight);
-            h_cosDiLep->Fill(TMath::Cos(theta1),theWeight);
-            lepNeg.Boost(-W2.BoostVector());
-            W2.Boost(-t2.BoostVector());
-            float theta2 = (W2.Angle(lepNeg.Vect()));
-            RecoCos.push_back(TMath::Cos(theta2));
-            //            RecoCos.push_back(theta2);
-            RecoCosMuMu.push_back(TMath::Cos(theta2));
-            h_cosMuMu->Fill(TMath::Cos(theta2),theWeight);
-            h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
-
-
-            t_cos.push_back(TMath::Cos(theta1));
-            t_cos.push_back(TMath::Cos(theta2));
-
-
-            if(!isData)
+            if(nuSol.neutrino.pt()> 0 && nuSol.neutrinoBar.pt() > 0 )
             {
-                TLorentzVector genW1;
-                TLorentzVector genW2;
-                TLorentzVector gent1;
-                TLorentzVector gent2;
-                TLorentzVector genttbar;
-                TLorentzVector genPosLep;
-                TLorentzVector genNegLep;
-                const pat::PackedGenParticle matchedPosMu = mse::getMatchedGenParticle(posMu, genColl,13);
+                // cout << "what 0" << endl;
+                TLorentzVector nu;
+                TLorentzVector nuBar;
+                nu.SetPtEtaPhiM(nuSol.neutrino.pt(),nuSol.neutrino.eta(),nuSol.neutrino.phi(),nuSol.neutrino.mass());
+                nuBar.SetPtEtaPhiM(nuSol.neutrinoBar.pt(),nuSol.neutrinoBar.eta(),nuSol.neutrinoBar.phi(),nuSol.neutrinoBar.mass());
+                W1 = nu + lepPos;
+                W2 = nuBar + lepNeg;
+                // cout << "what 1" << endl;
+                h_yWMuMu->Fill(W1.Rapidity(),theWeight);
+                h_yWMuMu->Fill(W2.Rapidity(),theWeight);
+                h_yWDiLep->Fill(W1.Rapidity(),theWeight);
+                h_yWDiLep->Fill(W2.Rapidity(),theWeight);
+                h_ptWMuMu->Fill(W1.Pt(),theWeight);
+                h_ptWMuMu->Fill(W2.Pt(),theWeight);
+                h_ptWDiLep->Fill(W1.Pt(),theWeight);
+                h_ptWDiLep->Fill(W2.Pt(),theWeight);
 
-                const reco::GenParticle posWMuMu = mse::getMotherPacked(matchedPosMu);
-                const reco::GenParticle topMuMu = mse::getMother(posWMuMu);
-                //                if(matchedPosMu.pt() != 0 )  cout << matchedPosMu.pt() << "muon match mother"<< posWMuMu.pdgId()<<"topMuMu Mother pdgId"<< topMuMu.pdgId() << endl;
-                const pat::PackedGenParticle matchedNegMu = mse::getMatchedGenParticle(negMu, genColl,13);
-                const reco::GenParticle negWMuMu = mse::getMotherPacked(matchedNegMu);
-                const reco::GenParticle antitopMuMu = mse::getMother(negWMuMu);
-                if(matchedPosMu.pt()> 0 && matchedNegMu.pt() > 0 && posWMuMu.pdgId() == 24 && topMuMu.pdgId() == 6 && negWMuMu.pdgId() == -24 && antitopMuMu.pdgId() == -6  )
+                t1 = W1 + BJet;
+                t2 = W2 + BBJet;
+                ttbar = t1 + t2;
+                // cout << "what 2" << endl;
+                h_yTMuMu->Fill(t1.Rapidity(),theWeight);
+                h_yTMuMu->Fill(t2.Rapidity(),theWeight);
+                h_yTDiLep->Fill(t1.Rapidity(),theWeight);
+                h_yTDiLep->Fill(t2.Rapidity(),theWeight);
+                h_ptTMuMu->Fill(t1.Pt(),theWeight);
+                h_ptTMuMu->Fill(t2.Pt(),theWeight);
+                h_ptTDiLep->Fill(t1.Pt(),theWeight);
+                h_ptTDiLep->Fill(t2.Pt(),theWeight);
+                h_mTTbarMuMu->Fill(ttbar.M(),theWeight);
+                h_TTbarM->Fill(ttbar.M(),theWeight);
+
+                t_antinu.push_back(myLorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
+                t_antinu_pt.push_back(nuBar.Pt());
+                t_antinu_eta.push_back(nuBar.Eta());
+                t_antinu_phi.push_back(nuBar.Phi());
+                t_antinu_e.push_back(nuBar.E());
+                t_nu.push_back(myLorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
+                t_nu_pt.push_back(nu.Pt());
+                t_nu_eta.push_back(nu.Eta());
+                t_nu_phi.push_back(nu.Phi());
+                t_nu_e.push_back(nu.E());
+                t_antiW.push_back(myLorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
+                t_antiW_pt.push_back(W2.Pt());
+                t_antiW_eta.push_back(W2.Eta());
+                t_antiW_phi.push_back(W2.Phi());
+                t_antiW_e.push_back(W2.E());
+                t_W.push_back(myLorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
+                t_W_pt.push_back(W1.Pt());
+                t_W_eta.push_back(W1.Eta());
+                t_W_phi.push_back(W1.Phi());
+                t_W_e.push_back(W1.E());
+                t_antitop.push_back(myLorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
+                t_antitop_pt.push_back(t2.Pt());
+                t_antitop_eta.push_back(t2.Eta());
+                t_antitop_phi.push_back(t2.Phi());
+                t_antitop_e.push_back(t2.E());
+                t_top.push_back(myLorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
+                t_top_pt.push_back(t1.Pt());
+                t_top_eta.push_back(t1.Eta());
+                t_top_phi.push_back(t1.Phi());
+                t_top_e.push_back(t1.E());
+
+                //++n_afterTop;
+                h_Nevents_top->Fill(1,theWeight);
+                h_NeventsMuMu_top->Fill(1,theWeight);
+                RecoMTT.push_back(ttbar.M());
+                RecoMTTMuMu.push_back(ttbar.M());
+
+
+                lepPos.Boost(-W1.BoostVector());
+                W1.Boost(-t1.BoostVector());
+                float theta1 = (W1.Angle(lepPos.Vect()));
+                RecoCos.push_back(TMath::Cos(theta1));
+                //            RecoCos.push_back(theta1);
+                RecoCosMuMu.push_back(TMath::Cos(theta1));
+                h_cosMuMu->Fill(TMath::Cos(theta1),theWeight);
+                h_cosDiLep->Fill(TMath::Cos(theta1),theWeight);
+                lepNeg.Boost(-W2.BoostVector());
+                W2.Boost(-t2.BoostVector());
+                float theta2 = (W2.Angle(lepNeg.Vect()));
+                RecoCos.push_back(TMath::Cos(theta2));
+                //            RecoCos.push_back(theta2);
+                RecoCosMuMu.push_back(TMath::Cos(theta2));
+                h_cosMuMu->Fill(TMath::Cos(theta2),theWeight);
+                h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
+
+
+                t_cos.push_back(TMath::Cos(theta1));
+                t_cos.push_back(TMath::Cos(theta2));
+
+
+                if(!isData)
                 {
-                    genPosLep.Clear();
-                    genNegLep.Clear();
-                    genW1.Clear();
-                    genW2.Clear();
-                    gent1.Clear();
-                    gent2.Clear();
-                    genttbar.Clear();
-                    genPosLep.SetPtEtaPhiM(matchedPosMu.pt(),matchedPosMu.eta(),matchedPosMu.phi(),matchedPosMu.mass());
-                    genNegLep.SetPtEtaPhiM(matchedNegMu.pt(),matchedNegMu.eta(),matchedNegMu.phi(),matchedNegMu.mass());
+                    TLorentzVector genW1;
+                    TLorentzVector genW2;
+                    TLorentzVector gent1;
+                    TLorentzVector gent2;
+                    TLorentzVector genttbar;
+                    TLorentzVector genPosLep;
+                    TLorentzVector genNegLep;
+                    const pat::PackedGenParticle matchedPosMu = mse::getMatchedGenParticle(posMu, genColl,13);
 
-                    genW1.SetPtEtaPhiM(posWMuMu.pt(),posWMuMu.eta(),posWMuMu.phi(),posWMuMu.mass());
-                    genW2.SetPtEtaPhiM(negWMuMu.pt(),negWMuMu.eta(),negWMuMu.phi(),negWMuMu.mass());
+                    const reco::GenParticle posWMuMu = mse::getMotherPacked(matchedPosMu);
+                    const reco::GenParticle topMuMu = mse::getMotherPacked(posWMuMu);
+                    //                if(matchedPosMu.pt() != 0 )  cout << matchedPosMu.pt() << "muon match mother"<< posWMuMu.pdgId()<<"topMuMu Mother pdgId"<< topMuMu.pdgId() << endl;
+                    const pat::PackedGenParticle matchedNegMu = mse::getMatchedGenParticle(negMu, genColl,13);
+                    const reco::GenParticle negWMuMu = mse::getMotherPacked(matchedNegMu);
+                    const reco::GenParticle antitopMuMu = mse::getMotherPacked(negWMuMu);
+                    if(matchedPosMu.pt()> 0 && matchedNegMu.pt() > 0 && posWMuMu.pdgId() == 24 && topMuMu.pdgId() == 6 && negWMuMu.pdgId() == -24 && antitopMuMu.pdgId() == -6  )
+                    {
+                        genPosLep.Clear();
+                        genNegLep.Clear();
+                        genW1.Clear();
+                        genW2.Clear();
+                        gent1.Clear();
+                        gent2.Clear();
+                        genttbar.Clear();
+                        genPosLep.SetPtEtaPhiM(matchedPosMu.pt(),matchedPosMu.eta(),matchedPosMu.phi(),matchedPosMu.mass());
+                        genNegLep.SetPtEtaPhiM(matchedNegMu.pt(),matchedNegMu.eta(),matchedNegMu.phi(),matchedNegMu.mass());
 
-                    gent1.SetPtEtaPhiM(topMuMu.pt(),topMuMu.eta(),topMuMu.phi(),topMuMu.mass());
-                    gent2.SetPtEtaPhiM(antitopMuMu.pt(),antitopMuMu.eta(),antitopMuMu.phi(),antitopMuMu.mass());
+                        genW1.SetPtEtaPhiM(posWMuMu.pt(),posWMuMu.eta(),posWMuMu.phi(),posWMuMu.mass());
+                        genW2.SetPtEtaPhiM(negWMuMu.pt(),negWMuMu.eta(),negWMuMu.phi(),negWMuMu.mass());
 
-                    genttbar = gent1 + gent2;
-                    genPosLep.Boost(-genW1.BoostVector());
-                    genW1.Boost(-gent1.BoostVector());
+                        gent1.SetPtEtaPhiM(topMuMu.pt(),topMuMu.eta(),topMuMu.phi(),topMuMu.mass());
+                        gent2.SetPtEtaPhiM(antitopMuMu.pt(),antitopMuMu.eta(),antitopMuMu.phi(),antitopMuMu.mass());
 
-
-                    float gentheta1 = (genW1.Angle(genPosLep.Vect()));
-
-
-                    genNegLep.Boost(-genW2.BoostVector());
-                    genW2.Boost(-gent2.BoostVector());
-                    float gentheta2 = (genW2.Angle(genNegLep.Vect()));
-                    h_truthRecoMuMu->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
-                    h_truthRecoCos->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
-                    h_truthRecoMTT->Fill(ttbar.M(),genttbar.M());
-                    h_truthRecoMuMu->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
-                    h_truthRecoCos->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
-                    h_RecoMinusTruthCos->Fill(TMath::Cos(theta1)-TMath::Cos(gentheta1));
-                    h_RecoMinusTruthCos->Fill(TMath::Cos(theta2)-TMath::Cos(gentheta2));
-                    h_RecoMinusTruthMTT->Fill(ttbar.M() - genttbar.M());
+                        genttbar = gent1 + gent2;
+                        genPosLep.Boost(-genW1.BoostVector());
+                        genW1.Boost(-gent1.BoostVector());
 
 
+                        float gentheta1 = (genW1.Angle(genPosLep.Vect()));
 
 
+                        genNegLep.Boost(-genW2.BoostVector());
+                        genW2.Boost(-gent2.BoostVector());
+                        float gentheta2 = (genW2.Angle(genNegLep.Vect()));
+                        h_truthRecoMuMu->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
+                        h_truthRecoCos->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
+                        h_truthRecoMTT->Fill(ttbar.M(),genttbar.M());
+                        h_truthRecoMuMu->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
+                        h_truthRecoCos->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
+                        h_RecoMinusTruthCos->Fill(TMath::Cos(theta1)-TMath::Cos(gentheta1));
+                        h_RecoMinusTruthCos->Fill(TMath::Cos(theta2)-TMath::Cos(gentheta2));
+                        h_RecoMinusTruthMTT->Fill(ttbar.M() - genttbar.M());
+
+
+
+
+                    }
                 }
+
             }
+
+            h_Nevents_ATS->Fill(1,theWeight);
+            h_NeventsMuMu_ATS->Fill(1,theWeight);
+            h_ATS_ptLepMuMu->Fill(PosLep.Pt(),theWeight);
+            h_ATS_ptLepMuMu->Fill(NegLep.Pt(),theWeight);
+            h_ATS_etaLepMuMu->Fill(PosLep.Eta(),theWeight);
+            h_ATS_etaLepMuMu->Fill(NegLep.Eta(),theWeight);
+            h_ATS_mLepMuMu->Fill(dilepton.M(),theWeight);
+            h_ATS_METMuMu->Fill(met.pt(),theWeight);
+            h_ATS_NBJetsMuMu->Fill(bjets.size(),theWeight);
+            h_ATS_NJetsMuMu->Fill(njets.size(),theWeight);
+
+
+            h_NBJetsMuMu->Fill(bjets.size(),theWeight);
+            h_NBJetsDiLep->Fill(bjets.size(),theWeight);
+
+
+
 
         }
 
-        h_Nevents_ATS->Fill(1,theWeight);
-        h_NeventsMuMu_ATS->Fill(1,theWeight);
-        h_ATS_ptLepMuMu->Fill(PosLep.Pt(),theWeight);
-        h_ATS_ptLepMuMu->Fill(NegLep.Pt(),theWeight);
-        h_ATS_etaLepMuMu->Fill(PosLep.Eta(),theWeight);
-        h_ATS_etaLepMuMu->Fill(NegLep.Eta(),theWeight);
-        h_ATS_mLepMuMu->Fill(dilepton.M(),theWeight);
-        h_ATS_METMuMu->Fill(met.pt(),theWeight);
-        h_ATS_NBJetsMuMu->Fill(bjets.size(),theWeight);
-        h_ATS_NJetsMuMu->Fill(njets.size(),theWeight);
 
-
-        h_NBJetsMuMu->Fill(bjets.size(),theWeight);
-        h_NBJetsDiLep->Fill(bjets.size(),theWeight);
-
-
-
-
-    }
-
-
-    //////DiElectron:
-    if(isDiElectron )
-    {
-        // cout << "IM HERE! ElEl" << endl;
-        TLorentzVector W1;
-        TLorentzVector W2;
-        TLorentzVector t1;
-        TLorentzVector t2;
-        TLorentzVector ttbar;
-        TLorentzVector lepPos;
-        TLorentzVector lepNeg;
-        TLorentzVector BJet;
-        TLorentzVector BBJet;
-        TLorentzVector dilepton;
-        lepPos.Clear();
-        lepNeg.Clear();
-
-        lepPos.SetPtEtaPhiE(posEl.pt(),posEl.eta(),posEl.phi(),posEl.energy());
-        lepNeg.SetPtEtaPhiE(negEl.pt(),negEl.eta(),negEl.phi(),negEl.energy());
-        BJet.SetPtEtaPhiE(bjets.at(0).pt(),bjets.at(0).eta(),bjets.at(0).phi(),bjets.at(0).energy());
-        BBJet.SetPtEtaPhiE(bjets.at(1).pt(),bjets.at(1).eta(),bjets.at(1).phi(),bjets.at(1).energy());
-
-        //        amwtsolver->SetConstraints(met.px(),met.py());
-
-        //        TtFullLepKinSolver::NeutrinoSolution nuSol=amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
-
-        amwtSolver->SetConstraints(met.px(),met.py());
-        TtAMWTSolver::NeutrinoSolution nuSol =  amwtSolver->NuSolver(lepPos,lepNeg,BJet,BBJet);
-        // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
-        // cout << nuSol.neutrinoBar.p4() << " neutrinoBar "<< endl;
-        dilepton = lepPos + lepNeg;
-        if(nuSol.neutrino.pt()> 20 && nuSol.neutrinoBar.pt() > 20 )
+        //////DiElectron:
+        if(isDiElectron )
         {
-            // cout << "what 0" << endl;
-            TLorentzVector nu;
-            TLorentzVector nuBar;
-            nu.Clear();
-            nuBar.Clear();
-            nu.SetPtEtaPhiM(nuSol.neutrino.pt(),nuSol.neutrino.eta(),nuSol.neutrino.phi(),nuSol.neutrino.mass());
-            nuBar.SetPtEtaPhiM(nuSol.neutrinoBar.pt(),nuSol.neutrinoBar.eta(),nuSol.neutrinoBar.phi(),nuSol.neutrinoBar.mass());
-            W1 = nu + lepPos;
-            W2 = nuBar + lepNeg;
-            // cout << "what 1" << endl;
-            h_yWElEl->Fill(W1.Rapidity(),theWeight);
-            h_yWElEl->Fill(W2.Rapidity(),theWeight);
-            h_yWDiLep->Fill(W1.Rapidity(),theWeight);
-            h_yWDiLep->Fill(W2.Rapidity(),theWeight);
-            h_ptWElEl->Fill(W1.Pt(),theWeight);
-            h_ptWElEl->Fill(W2.Pt(),theWeight);
-            h_ptWDiLep->Fill(W1.Pt(),theWeight);
-            h_ptWDiLep->Fill(W2.Pt(),theWeight);
+            // cout << "IM HERE! ElEl" << endl;
+            TLorentzVector W1;
+            TLorentzVector W2;
+            TLorentzVector t1;
+            TLorentzVector t2;
+            TLorentzVector ttbar;
+            TLorentzVector lepPos;
+            TLorentzVector lepNeg;
+            TLorentzVector BJet;
+            TLorentzVector BBJet;
+            TLorentzVector dilepton;
+            lepPos.Clear();
+            lepNeg.Clear();
 
-            t1 = W1 + BJet;
-            t2 = W2 + BBJet;
-            ttbar = t1 + t2;
-            // cout << "what 2" << endl;
-            h_yTElEl->Fill(t1.Rapidity(),theWeight);
-            h_yTElEl->Fill(t2.Rapidity(),theWeight);
-            h_yTDiLep->Fill(t1.Rapidity(),theWeight);
-            h_yTDiLep->Fill(t2.Rapidity(),theWeight);
-            h_ptTElEl->Fill(t1.Pt(),theWeight);
-            h_ptTElEl->Fill(t2.Pt(),theWeight);
-            h_ptTDiLep->Fill(t1.Pt(),theWeight);
-            h_ptTDiLep->Fill(t2.Pt(),theWeight);
-            h_mTTbarElEl->Fill(ttbar.M(),theWeight);
-            h_TTbarM->Fill(ttbar.M(),theWeight);
-            //++n_afterTop;
-            h_Nevents_top->Fill(1,theWeight);
-            h_NeventsElEl_top->Fill(1,theWeight);
-            RecoMTT.push_back(ttbar.M());
+            lepPos.SetPtEtaPhiE(posEl.pt(),posEl.eta(),posEl.phi(),posEl.energy());
+            lepNeg.SetPtEtaPhiE(negEl.pt(),negEl.eta(),negEl.phi(),negEl.energy());
+            BJet.SetPtEtaPhiE(bjets.at(0).pt(),bjets.at(0).eta(),bjets.at(0).phi(),bjets.at(0).energy());
+            BBJet.SetPtEtaPhiE(bjets.at(1).pt(),bjets.at(1).eta(),bjets.at(1).phi(),bjets.at(1).energy());
 
-             t_antinu.push_back(LorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
-            t_antinu_pt.push_back(nuBar.Pt());
-            t_antinu_eta.push_back(nuBar.Eta());
-            t_antinu_phi.push_back(nuBar.Phi());
-            t_antinu_e.push_back(nuBar.E());
-            t_nu.push_back(LorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
-            t_nu_pt.push_back(nu.Pt());
-            t_nu_eta.push_back(nu.Eta());
-            t_nu_phi.push_back(nu.Phi());
-            t_nu_e.push_back(nu.E());
-            t_antiW.push_back(LorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
-            t_antiW_pt.push_back(W2.Pt());
-            t_antiW_eta.push_back(W2.Eta());
-            t_antiW_phi.push_back(W2.Phi());
-            t_antiW_e.push_back(W2.E());
-            t_W.push_back(LorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
-            t_W_pt.push_back(W1.Pt());
-            t_W_eta.push_back(W1.Eta());
-            t_W_phi.push_back(W1.Phi());
-            t_W_e.push_back(W1.E());
-            t_antitop.push_back(LorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
-            t_antitop_pt.push_back(t2.Pt());
-            t_antitop_eta.push_back(t2.Eta());
-            t_antitop_phi.push_back(t2.Phi());
-            t_antitop_e.push_back(t2.E());
-            t_top.push_back(LorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
-            t_top_pt.push_back(t1.Pt());
-            t_top_eta.push_back(t1.Eta());
-            t_top_phi.push_back(t1.Phi());
-            t_top_e.push_back(t1.E());
+            //        amwtsolver->SetConstraints(met.px(),met.py());
 
+            //        TtFullLepKinSolver::NeutrinoSolution nuSol=amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
 
-
-            // cout << "what 3" << endl;
-            lepPos.Boost(-W1.BoostVector());
-            W1.Boost(-t1.BoostVector());
-            float theta1 = (W1.Angle(lepPos.Vect()));
-            RecoCos.push_back(TMath::Cos(theta1));
-            //            RecoCos.push_back(theta1);
-            // cout << "what 3.1" << endl;
-            h_cosElEl->Fill(TMath::Cos(theta1),theWeight);
-            // cout << "what 3.2" << endl;
-            h_cosDiLep->Fill(TMath::Cos(theta1),theWeight);
-            lepNeg.Boost(-W2.BoostVector());
-            W2.Boost(-t2.BoostVector());
-            float theta2 = (W2.Angle(lepNeg.Vect()));
-            RecoCos.push_back(TMath::Cos(theta2));
-            //            RecoCos.push_back(theta2);
-            h_cosElEl->Fill(TMath::Cos(theta2),theWeight);
-            h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
-            // cout << "what 4" << endl;
-
-            t_cos.push_back(TMath::Cos(theta1));
-            t_cos.push_back(TMath::Cos(theta2));
-
-            if(!isData)
+            amwtSolver->SetConstraints(met.px(),met.py());
+            TtAMWTSolver::NeutrinoSolution nuSol =  amwtSolver->NuSolver(lepPos,lepNeg,BJet,BBJet);
+            // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
+            // cout << nuSol.neutrinoBar.p4() << " neutrinoBar "<< endl;
+            dilepton = lepPos + lepNeg;
+            if(nuSol.neutrino.pt()> 20 && nuSol.neutrinoBar.pt() > 20 )
             {
-                TLorentzVector genW1;
-                TLorentzVector genW2;
-                TLorentzVector gent1;
-                TLorentzVector gent2;
-                TLorentzVector genttbar;
-                TLorentzVector genPosLep;
-                TLorentzVector genNegLep;
-                const pat::PackedGenParticle matchedPosEl = mse::getMatchedGenParticle(posEl, genColl,11);
+                // cout << "what 0" << endl;
+                TLorentzVector nu;
+                TLorentzVector nuBar;
+                nu.Clear();
+                nuBar.Clear();
+                nu.SetPtEtaPhiM(nuSol.neutrino.pt(),nuSol.neutrino.eta(),nuSol.neutrino.phi(),nuSol.neutrino.mass());
+                nuBar.SetPtEtaPhiM(nuSol.neutrinoBar.pt(),nuSol.neutrinoBar.eta(),nuSol.neutrinoBar.phi(),nuSol.neutrinoBar.mass());
+                W1 = nu + lepPos;
+                W2 = nuBar + lepNeg;
+                // cout << "what 1" << endl;
+                h_yWElEl->Fill(W1.Rapidity(),theWeight);
+                h_yWElEl->Fill(W2.Rapidity(),theWeight);
+                h_yWDiLep->Fill(W1.Rapidity(),theWeight);
+                h_yWDiLep->Fill(W2.Rapidity(),theWeight);
+                h_ptWElEl->Fill(W1.Pt(),theWeight);
+                h_ptWElEl->Fill(W2.Pt(),theWeight);
+                h_ptWDiLep->Fill(W1.Pt(),theWeight);
+                h_ptWDiLep->Fill(W2.Pt(),theWeight);
 
-                const reco::GenParticle posWElEl = mse::getMotherPacked(matchedPosEl);
-                const reco::GenParticle topElEl = mse::getMother(posWElEl);
-                const pat::PackedGenParticle matchedNegEl = mse::getMatchedGenParticle(negEl, genColl,11);
-                const reco::GenParticle negWElEl = mse::getMotherPacked(matchedNegEl);
-                const reco::GenParticle antitopElEl = mse::getMother(negWElEl);
-                if(matchedPosEl.pt()> 0 && matchedNegEl.pt() > 0 && posWElEl.pdgId() == 24 && topElEl.pdgId() == 6 && negWElEl.pdgId() == -24 && antitopElEl.pdgId() == -6  )
+                t1 = W1 + BJet;
+                t2 = W2 + BBJet;
+                ttbar = t1 + t2;
+                // cout << "what 2" << endl;
+                h_yTElEl->Fill(t1.Rapidity(),theWeight);
+                h_yTElEl->Fill(t2.Rapidity(),theWeight);
+                h_yTDiLep->Fill(t1.Rapidity(),theWeight);
+                h_yTDiLep->Fill(t2.Rapidity(),theWeight);
+                h_ptTElEl->Fill(t1.Pt(),theWeight);
+                h_ptTElEl->Fill(t2.Pt(),theWeight);
+                h_ptTDiLep->Fill(t1.Pt(),theWeight);
+                h_ptTDiLep->Fill(t2.Pt(),theWeight);
+                h_mTTbarElEl->Fill(ttbar.M(),theWeight);
+                h_TTbarM->Fill(ttbar.M(),theWeight);
+                //++n_afterTop;
+                h_Nevents_top->Fill(1,theWeight);
+                h_NeventsElEl_top->Fill(1,theWeight);
+                RecoMTT.push_back(ttbar.M());
+
+                t_antinu.push_back(myLorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
+                t_antinu_pt.push_back(nuBar.Pt());
+                t_antinu_eta.push_back(nuBar.Eta());
+                t_antinu_phi.push_back(nuBar.Phi());
+                t_antinu_e.push_back(nuBar.E());
+                t_nu.push_back(myLorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
+                t_nu_pt.push_back(nu.Pt());
+                t_nu_eta.push_back(nu.Eta());
+                t_nu_phi.push_back(nu.Phi());
+                t_nu_e.push_back(nu.E());
+                t_antiW.push_back(myLorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
+                t_antiW_pt.push_back(W2.Pt());
+                t_antiW_eta.push_back(W2.Eta());
+                t_antiW_phi.push_back(W2.Phi());
+                t_antiW_e.push_back(W2.E());
+                t_W.push_back(myLorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
+                t_W_pt.push_back(W1.Pt());
+                t_W_eta.push_back(W1.Eta());
+                t_W_phi.push_back(W1.Phi());
+                t_W_e.push_back(W1.E());
+                t_antitop.push_back(myLorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
+                t_antitop_pt.push_back(t2.Pt());
+                t_antitop_eta.push_back(t2.Eta());
+                t_antitop_phi.push_back(t2.Phi());
+                t_antitop_e.push_back(t2.E());
+                t_top.push_back(myLorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
+                t_top_pt.push_back(t1.Pt());
+                t_top_eta.push_back(t1.Eta());
+                t_top_phi.push_back(t1.Phi());
+                t_top_e.push_back(t1.E());
+
+
+
+                // cout << "what 3" << endl;
+                lepPos.Boost(-W1.BoostVector());
+                W1.Boost(-t1.BoostVector());
+                float theta1 = (W1.Angle(lepPos.Vect()));
+                RecoCos.push_back(TMath::Cos(theta1));
+                //            RecoCos.push_back(theta1);
+                // cout << "what 3.1" << endl;
+                h_cosElEl->Fill(TMath::Cos(theta1),theWeight);
+                // cout << "what 3.2" << endl;
+                h_cosDiLep->Fill(TMath::Cos(theta1),theWeight);
+                lepNeg.Boost(-W2.BoostVector());
+                W2.Boost(-t2.BoostVector());
+                float theta2 = (W2.Angle(lepNeg.Vect()));
+                RecoCos.push_back(TMath::Cos(theta2));
+                //            RecoCos.push_back(theta2);
+                h_cosElEl->Fill(TMath::Cos(theta2),theWeight);
+                h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
+                // cout << "what 4" << endl;
+
+                t_cos.push_back(TMath::Cos(theta1));
+                t_cos.push_back(TMath::Cos(theta2));
+
+                if(!isData)
                 {
-                    genPosLep.Clear();
-                    genNegLep.Clear();
-                    genW1.Clear();
-                    genW2.Clear();
-                    gent1.Clear();
-                    gent2.Clear();
-                    genttbar.Clear();
-                    genPosLep.SetPtEtaPhiM(matchedPosEl.pt(),matchedPosEl.eta(),matchedPosEl.phi(),matchedPosEl.mass());
-                    genNegLep.SetPtEtaPhiM(matchedNegEl.pt(),matchedNegEl.eta(),matchedNegEl.phi(),matchedNegEl.mass());
+                    TLorentzVector genW1;
+                    TLorentzVector genW2;
+                    TLorentzVector gent1;
+                    TLorentzVector gent2;
+                    TLorentzVector genttbar;
+                    TLorentzVector genPosLep;
+                    TLorentzVector genNegLep;
+                    const pat::PackedGenParticle matchedPosEl = mse::getMatchedGenParticle(posEl, genColl,11);
+
+                    const reco::GenParticle posWElEl = mse::getMotherPacked(matchedPosEl);
+                    const reco::GenParticle topElEl = mse::getMotherPacked(posWElEl);
+                    const pat::PackedGenParticle matchedNegEl = mse::getMatchedGenParticle(negEl, genColl,11);
+                    const reco::GenParticle negWElEl = mse::getMotherPacked(matchedNegEl);
+                    const reco::GenParticle antitopElEl = mse::getMotherPacked(negWElEl);
+                    if(matchedPosEl.pt()> 0 && matchedNegEl.pt() > 0 && posWElEl.pdgId() == 24 && topElEl.pdgId() == 6 && negWElEl.pdgId() == -24 && antitopElEl.pdgId() == -6  )
+                    {
+                        genPosLep.Clear();
+                        genNegLep.Clear();
+                        genW1.Clear();
+                        genW2.Clear();
+                        gent1.Clear();
+                        gent2.Clear();
+                        genttbar.Clear();
+                        genPosLep.SetPtEtaPhiM(matchedPosEl.pt(),matchedPosEl.eta(),matchedPosEl.phi(),matchedPosEl.mass());
+                        genNegLep.SetPtEtaPhiM(matchedNegEl.pt(),matchedNegEl.eta(),matchedNegEl.phi(),matchedNegEl.mass());
 
 
-                    genW1.SetPtEtaPhiM(posWElEl.pt(),posWElEl.eta(),posWElEl.phi(),posWElEl.mass());
-                    genW2.SetPtEtaPhiM(negWElEl.pt(),negWElEl.eta(),negWElEl.phi(),negWElEl.mass());
+                        genW1.SetPtEtaPhiM(posWElEl.pt(),posWElEl.eta(),posWElEl.phi(),posWElEl.mass());
+                        genW2.SetPtEtaPhiM(negWElEl.pt(),negWElEl.eta(),negWElEl.phi(),negWElEl.mass());
 
-                    gent1.SetPtEtaPhiM(topElEl.pt(),topElEl.eta(),topElEl.phi(),topElEl.mass());
-                    gent2.SetPtEtaPhiM(antitopElEl.pt(),antitopElEl.eta(),antitopElEl.phi(),antitopElEl.mass());
+                        gent1.SetPtEtaPhiM(topElEl.pt(),topElEl.eta(),topElEl.phi(),topElEl.mass());
+                        gent2.SetPtEtaPhiM(antitopElEl.pt(),antitopElEl.eta(),antitopElEl.phi(),antitopElEl.mass());
 
-                    genttbar = gent1 + gent2;
-                    genPosLep.Boost(-genW1.BoostVector());
-                    genW1.Boost(-gent1.BoostVector());
-
-
-                    float gentheta1 = (genW1.Angle(genPosLep.Vect()));
-
-                    genNegLep.Boost(-genW2.BoostVector());
-                    genW2.Boost(-gent2.BoostVector());
-                    float gentheta2 = (genW2.Angle(genNegLep.Vect()));
-                    h_truthRecoElEl->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
-                    h_truthRecoCos->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
-                    h_truthRecoMTT->Fill(ttbar.M(),genttbar.M());
-                    h_truthRecoElEl->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
-                    h_truthRecoCos->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
-                    h_RecoMinusTruthCos->Fill(TMath::Cos(theta1)-TMath::Cos(gentheta1));
-                    h_RecoMinusTruthCos->Fill(TMath::Cos(theta2)-TMath::Cos(gentheta2));
-                    h_RecoMinusTruthMTT->Fill(ttbar.M() - genttbar.M());
+                        genttbar = gent1 + gent2;
+                        genPosLep.Boost(-genW1.BoostVector());
+                        genW1.Boost(-gent1.BoostVector());
 
 
+                        float gentheta1 = (genW1.Angle(genPosLep.Vect()));
+
+                        genNegLep.Boost(-genW2.BoostVector());
+                        genW2.Boost(-gent2.BoostVector());
+                        float gentheta2 = (genW2.Angle(genNegLep.Vect()));
+                        h_truthRecoElEl->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
+                        h_truthRecoCos->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
+                        h_truthRecoMTT->Fill(ttbar.M(),genttbar.M());
+                        h_truthRecoElEl->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
+                        h_truthRecoCos->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
+                        h_RecoMinusTruthCos->Fill(TMath::Cos(theta1)-TMath::Cos(gentheta1));
+                        h_RecoMinusTruthCos->Fill(TMath::Cos(theta2)-TMath::Cos(gentheta2));
+                        h_RecoMinusTruthMTT->Fill(ttbar.M() - genttbar.M());
 
 
+
+
+                    }
                 }
+
             }
+            //cout << "Am I here Now" <<endl;
+            h_Nevents_ATS->Fill(1,theWeight);
+            h_NeventsElEl_ATS->Fill(1,theWeight);
+            h_ATS_ptLepElEl->Fill(PosLep.Pt(),theWeight);
+            h_ATS_ptLepElEl->Fill(NegLep.Pt(),theWeight);
+            h_ATS_etaLepElEl->Fill(PosLep.Eta(),theWeight);
+            h_ATS_etaLepElEl->Fill(NegLep.Eta(),theWeight);
+            h_ATS_mLepElEl->Fill(dilepton.M(),theWeight);
+            h_ATS_METElEl->Fill(met.pt(),theWeight);
+            h_ATS_NBJetsElEl->Fill(bjets.size(),theWeight);
+            h_ATS_NJetsElEl->Fill(njets.size(),theWeight);
 
+
+            // cout << "what 5" << endl;
+            h_NBJetsElEl->Fill(bjets.size(),theWeight);
+            h_NBJetsDiLep->Fill(bjets.size(),theWeight);
+            // cout << "what 6" << endl;
         }
-        //cout << "Am I here Now" <<endl;
-        h_Nevents_ATS->Fill(1,theWeight);
-        h_NeventsElEl_ATS->Fill(1,theWeight);
-        h_ATS_ptLepElEl->Fill(PosLep.Pt(),theWeight);
-        h_ATS_ptLepElEl->Fill(NegLep.Pt(),theWeight);
-        h_ATS_etaLepElEl->Fill(PosLep.Eta(),theWeight);
-        h_ATS_etaLepElEl->Fill(NegLep.Eta(),theWeight);
-        h_ATS_mLepElEl->Fill(dilepton.M(),theWeight);
-        h_ATS_METElEl->Fill(met.pt(),theWeight);
-        h_ATS_NBJetsElEl->Fill(bjets.size(),theWeight);
-        h_ATS_NJetsElEl->Fill(njets.size(),theWeight);
-
-
-        // cout << "what 5" << endl;
-        h_NBJetsElEl->Fill(bjets.size(),theWeight);
-        h_NBJetsDiLep->Fill(bjets.size(),theWeight);
-        // cout << "what 6" << endl;
-    }
-    //////ElectronMuon:
-    if(isElMu )
-    {
-        // cout << "IM HERE!ElMu" << endl;
-        TLorentzVector W1;
-        TLorentzVector W2;
-        TLorentzVector t1;
-        TLorentzVector t2;
-        TLorentzVector ttbar;
-        TLorentzVector lepPos;
-        TLorentzVector lepNeg;
-        TLorentzVector BJet;
-        TLorentzVector BBJet;
-        TLorentzVector dilepton;
-        lepPos.SetPtEtaPhiE(posEl.pt(),posEl.eta(),posEl.phi(),posEl.energy());
-        lepNeg.SetPtEtaPhiE(negMu.pt(),negMu.eta(),negMu.phi(),negMu.energy());
-        BJet.SetPtEtaPhiE(bjets.at(0).pt(),bjets.at(0).eta(),bjets.at(0).phi(),bjets.at(0).energy());
-        BBJet.SetPtEtaPhiE(bjets.at(1).pt(),bjets.at(1).eta(),bjets.at(1).phi(),bjets.at(1).energy());
-
-
-        //        amwtsolver->SetConstraints(met.px(),met.py());
-
-        //        TtFullLepKinSolver::NeutrinoSolution nuSol=amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
-        amwtSolver->SetConstraints(met.px(),met.py());
-        TtAMWTSolver::NeutrinoSolution nuSol =  amwtSolver->NuSolver(lepPos,lepNeg,BJet,BBJet);
-        // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
-        dilepton = lepPos + lepNeg;
-        if(nuSol.neutrino.pt()> 0 && nuSol.neutrinoBar.pt() > 0 )
+        //////ElectronMuon:
+        if(isElMu )
         {
-            // cout << "what 0" << endl;
-            TLorentzVector nu;
-            TLorentzVector nuBar;
-            nu.SetPtEtaPhiM(nuSol.neutrino.pt(),nuSol.neutrino.eta(),nuSol.neutrino.phi(),nuSol.neutrino.mass());
-            nuBar.SetPtEtaPhiM(nuSol.neutrinoBar.pt(),nuSol.neutrinoBar.eta(),nuSol.neutrinoBar.phi(),nuSol.neutrinoBar.mass());
-            W1 = nu + lepPos;
-            W2 = nuBar + lepNeg;
-            // cout << "what 1" << endl;
-            h_yWElMu->Fill(W1.Rapidity(),theWeight);
-            h_yWElMu->Fill(W2.Rapidity(),theWeight);
-            h_yWDiLep->Fill(W1.Rapidity(),theWeight);
-            h_yWDiLep->Fill(W2.Rapidity(),theWeight);
-            h_ptWElMu->Fill(W1.Pt(),theWeight);
-            h_ptWElMu->Fill(W2.Pt(),theWeight);
-            h_ptWDiLep->Fill(W1.Pt(),theWeight);
-            h_ptWDiLep->Fill(W2.Pt(),theWeight);
-
-            t1 = W1 + BJet;
-            t2 = W2 + BBJet;
-            ttbar = t1 + t2;
-            // cout << "what 2" << endl;
-            h_yTElMu->Fill(t1.Rapidity(),theWeight);
-            h_yTElMu->Fill(t2.Rapidity(),theWeight);
-            h_yTDiLep->Fill(t1.Rapidity(),theWeight);
-            h_yTDiLep->Fill(t2.Rapidity(),theWeight);
-            h_ptTElMu->Fill(t1.Pt(),theWeight);
-            h_ptTElMu->Fill(t2.Pt(),theWeight);
-            h_ptTDiLep->Fill(t1.Pt(),theWeight);
-            h_ptTDiLep->Fill(t2.Pt(),theWeight);
-            h_mTTbarElMu->Fill(ttbar.M(),theWeight);
-            h_TTbarM->Fill(ttbar.M(),theWeight);
-
-             t_antinu.push_back(LorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
-            t_antinu_pt.push_back(nuBar.Pt());
-            t_antinu_eta.push_back(nuBar.Eta());
-            t_antinu_phi.push_back(nuBar.Phi());
-            t_antinu_e.push_back(nuBar.E());
-            t_nu.push_back(LorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
-            t_nu_pt.push_back(nu.Pt());
-            t_nu_eta.push_back(nu.Eta());
-            t_nu_phi.push_back(nu.Phi());
-            t_nu_e.push_back(nu.E());
-            t_antiW.push_back(LorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
-            t_antiW_pt.push_back(W2.Pt());
-            t_antiW_eta.push_back(W2.Eta());
-            t_antiW_phi.push_back(W2.Phi());
-            t_antiW_e.push_back(W2.E());
-            t_W.push_back(LorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
-            t_W_pt.push_back(W1.Pt());
-            t_W_eta.push_back(W1.Eta());
-            t_W_phi.push_back(W1.Phi());
-            t_W_e.push_back(W1.E());
-            t_antitop.push_back(LorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
-            t_antitop_pt.push_back(t2.Pt());
-            t_antitop_eta.push_back(t2.Eta());
-            t_antitop_phi.push_back(t2.Phi());
-            t_antitop_e.push_back(t2.E());
-            t_top.push_back(LorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
-            t_top_pt.push_back(t1.Pt());
-            t_top_eta.push_back(t1.Eta());
-            t_top_phi.push_back(t1.Phi());
-            t_top_e.push_back(t1.E());
-
-            //++n_afterTop;
-            h_Nevents_top->Fill(1,theWeight);
-            h_NeventsElMu_top->Fill(1,theWeight);
-            RecoMTT.push_back(ttbar.M());
+            // cout << "IM HERE!ElMu" << endl;
+            TLorentzVector W1;
+            TLorentzVector W2;
+            TLorentzVector t1;
+            TLorentzVector t2;
+            TLorentzVector ttbar;
+            TLorentzVector lepPos;
+            TLorentzVector lepNeg;
+            TLorentzVector BJet;
+            TLorentzVector BBJet;
+            TLorentzVector dilepton;
+            lepPos.SetPtEtaPhiE(posEl.pt(),posEl.eta(),posEl.phi(),posEl.energy());
+            lepNeg.SetPtEtaPhiE(negMu.pt(),negMu.eta(),negMu.phi(),negMu.energy());
+            BJet.SetPtEtaPhiE(bjets.at(0).pt(),bjets.at(0).eta(),bjets.at(0).phi(),bjets.at(0).energy());
+            BBJet.SetPtEtaPhiE(bjets.at(1).pt(),bjets.at(1).eta(),bjets.at(1).phi(),bjets.at(1).energy());
 
 
+            //        amwtsolver->SetConstraints(met.px(),met.py());
 
-            lepPos.Boost(-W1.BoostVector());
-            W1.Boost(-t1.BoostVector());
-            float theta1 = (W1.Angle(lepPos.Vect()));
-            RecoCos.push_back(TMath::Cos(theta1));
-            //            RecoCos.push_back(theta1);
-            h_cosElMu->Fill(TMath::Cos(theta1),theWeight);
-            h_cosDiLep->Fill(TMath::Cos(theta1),theWeight);
-            lepNeg.Boost(-W2.BoostVector());
-            W2.Boost(-t2.BoostVector());
-            float theta2 = (W2.Angle(lepNeg.Vect()));
-            RecoCos.push_back(TMath::Cos(theta2));
-            //            RecoCos.push_back(theta2);
-            h_cosElMu->Fill(TMath::Cos(theta2),theWeight);
-            h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
-
-
-            t_cos.push_back(TMath::Cos(theta1));
-            t_cos.push_back(TMath::Cos(theta2));
-
-            if(!isData)
+            //        TtFullLepKinSolver::NeutrinoSolution nuSol=amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
+            amwtSolver->SetConstraints(met.px(),met.py());
+            TtAMWTSolver::NeutrinoSolution nuSol =  amwtSolver->NuSolver(lepPos,lepNeg,BJet,BBJet);
+            // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
+            dilepton = lepPos + lepNeg;
+            if(nuSol.neutrino.pt()> 0 && nuSol.neutrinoBar.pt() > 0 )
             {
-                TLorentzVector genW1;
-                TLorentzVector genW2;
-                TLorentzVector gent1;
-                TLorentzVector gent2;
-                TLorentzVector genttbar;
-                TLorentzVector genPosLep;
-                TLorentzVector genNegLep;
-                const pat::PackedGenParticle matchedPosEMEl = mse::getMatchedGenParticle(posEl, genColl,11);
+                // cout << "what 0" << endl;
+                TLorentzVector nu;
+                TLorentzVector nuBar;
+                nu.SetPtEtaPhiM(nuSol.neutrino.pt(),nuSol.neutrino.eta(),nuSol.neutrino.phi(),nuSol.neutrino.mass());
+                nuBar.SetPtEtaPhiM(nuSol.neutrinoBar.pt(),nuSol.neutrinoBar.eta(),nuSol.neutrinoBar.phi(),nuSol.neutrinoBar.mass());
+                W1 = nu + lepPos;
+                W2 = nuBar + lepNeg;
+                // cout << "what 1" << endl;
+                h_yWElMu->Fill(W1.Rapidity(),theWeight);
+                h_yWElMu->Fill(W2.Rapidity(),theWeight);
+                h_yWDiLep->Fill(W1.Rapidity(),theWeight);
+                h_yWDiLep->Fill(W2.Rapidity(),theWeight);
+                h_ptWElMu->Fill(W1.Pt(),theWeight);
+                h_ptWElMu->Fill(W2.Pt(),theWeight);
+                h_ptWDiLep->Fill(W1.Pt(),theWeight);
+                h_ptWDiLep->Fill(W2.Pt(),theWeight);
 
-                const reco::GenParticle posWElMu = mse::getMotherPacked(matchedPosEMEl);
-                const reco::GenParticle topElMu = mse::getMother(posWElMu);
+                t1 = W1 + BJet;
+                t2 = W2 + BBJet;
+                ttbar = t1 + t2;
+                // cout << "what 2" << endl;
+                h_yTElMu->Fill(t1.Rapidity(),theWeight);
+                h_yTElMu->Fill(t2.Rapidity(),theWeight);
+                h_yTDiLep->Fill(t1.Rapidity(),theWeight);
+                h_yTDiLep->Fill(t2.Rapidity(),theWeight);
+                h_ptTElMu->Fill(t1.Pt(),theWeight);
+                h_ptTElMu->Fill(t2.Pt(),theWeight);
+                h_ptTDiLep->Fill(t1.Pt(),theWeight);
+                h_ptTDiLep->Fill(t2.Pt(),theWeight);
+                h_mTTbarElMu->Fill(ttbar.M(),theWeight);
+                h_TTbarM->Fill(ttbar.M(),theWeight);
 
-                const pat::PackedGenParticle matchedNegEMMu = mse::getMatchedGenParticle(negMu, genColl,13);
-                const reco::GenParticle negWElMu = mse::getMotherPacked(matchedNegEMMu);
-                const reco::GenParticle antitopElMu = mse::getMother(negWElMu);
-                if(matchedPosEMEl.pt() > 0 && matchedNegEMMu.pt() > 0 && posWElMu.pdgId() == 24 && topElMu.pdgId() == 6 && negWElMu.pdgId() == -24 && antitopElMu.pdgId() == -6  )
+                t_antinu.push_back(myLorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
+                t_antinu_pt.push_back(nuBar.Pt());
+                t_antinu_eta.push_back(nuBar.Eta());
+                t_antinu_phi.push_back(nuBar.Phi());
+                t_antinu_e.push_back(nuBar.E());
+                t_nu.push_back(myLorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
+                t_nu_pt.push_back(nu.Pt());
+                t_nu_eta.push_back(nu.Eta());
+                t_nu_phi.push_back(nu.Phi());
+                t_nu_e.push_back(nu.E());
+                t_antiW.push_back(myLorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
+                t_antiW_pt.push_back(W2.Pt());
+                t_antiW_eta.push_back(W2.Eta());
+                t_antiW_phi.push_back(W2.Phi());
+                t_antiW_e.push_back(W2.E());
+                t_W.push_back(myLorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
+                t_W_pt.push_back(W1.Pt());
+                t_W_eta.push_back(W1.Eta());
+                t_W_phi.push_back(W1.Phi());
+                t_W_e.push_back(W1.E());
+                t_antitop.push_back(myLorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
+                t_antitop_pt.push_back(t2.Pt());
+                t_antitop_eta.push_back(t2.Eta());
+                t_antitop_phi.push_back(t2.Phi());
+                t_antitop_e.push_back(t2.E());
+                t_top.push_back(myLorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
+                t_top_pt.push_back(t1.Pt());
+                t_top_eta.push_back(t1.Eta());
+                t_top_phi.push_back(t1.Phi());
+                t_top_e.push_back(t1.E());
+
+                //++n_afterTop;
+                h_Nevents_top->Fill(1,theWeight);
+                h_NeventsElMu_top->Fill(1,theWeight);
+                RecoMTT.push_back(ttbar.M());
+
+
+
+                lepPos.Boost(-W1.BoostVector());
+                W1.Boost(-t1.BoostVector());
+                float theta1 = (W1.Angle(lepPos.Vect()));
+                RecoCos.push_back(TMath::Cos(theta1));
+                //            RecoCos.push_back(theta1);
+                h_cosElMu->Fill(TMath::Cos(theta1),theWeight);
+                h_cosDiLep->Fill(TMath::Cos(theta1),theWeight);
+                lepNeg.Boost(-W2.BoostVector());
+                W2.Boost(-t2.BoostVector());
+                float theta2 = (W2.Angle(lepNeg.Vect()));
+                RecoCos.push_back(TMath::Cos(theta2));
+                //            RecoCos.push_back(theta2);
+                h_cosElMu->Fill(TMath::Cos(theta2),theWeight);
+                h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
+
+
+                t_cos.push_back(TMath::Cos(theta1));
+                t_cos.push_back(TMath::Cos(theta2));
+
+                if(!isData)
                 {
-                    genPosLep.Clear();
-                    genNegLep.Clear();
-                    genW1.Clear();
-                    genW2.Clear();
-                    gent1.Clear();
-                    gent2.Clear();
-                    genttbar.Clear();
-                    genPosLep.SetPtEtaPhiM(matchedPosEMEl.pt(),matchedPosEMEl.eta(),matchedPosEMEl.phi(),matchedPosEMEl.mass());
-                    genNegLep.SetPtEtaPhiM(matchedNegEMMu.pt(),matchedNegEMMu.eta(),matchedNegEMMu.phi(),matchedNegEMMu.mass());
+                    TLorentzVector genW1;
+                    TLorentzVector genW2;
+                    TLorentzVector gent1;
+                    TLorentzVector gent2;
+                    TLorentzVector genttbar;
+                    TLorentzVector genPosLep;
+                    TLorentzVector genNegLep;
+                    const pat::PackedGenParticle matchedPosEMEl = mse::getMatchedGenParticle(posEl, genColl,11);
+
+                    const reco::GenParticle posWElMu = mse::getMotherPacked(matchedPosEMEl);
+                    const reco::GenParticle topElMu = mse::getMotherPacked(posWElMu);
+
+                    const pat::PackedGenParticle matchedNegEMMu = mse::getMatchedGenParticle(negMu, genColl,13);
+                    const reco::GenParticle negWElMu = mse::getMotherPacked(matchedNegEMMu);
+                    const reco::GenParticle antitopElMu = mse::getMotherPacked(negWElMu);
+                    if(matchedPosEMEl.pt() > 0 && matchedNegEMMu.pt() > 0 && posWElMu.pdgId() == 24 && topElMu.pdgId() == 6 && negWElMu.pdgId() == -24 && antitopElMu.pdgId() == -6  )
+                    {
+                        genPosLep.Clear();
+                        genNegLep.Clear();
+                        genW1.Clear();
+                        genW2.Clear();
+                        gent1.Clear();
+                        gent2.Clear();
+                        genttbar.Clear();
+                        genPosLep.SetPtEtaPhiM(matchedPosEMEl.pt(),matchedPosEMEl.eta(),matchedPosEMEl.phi(),matchedPosEMEl.mass());
+                        genNegLep.SetPtEtaPhiM(matchedNegEMMu.pt(),matchedNegEMMu.eta(),matchedNegEMMu.phi(),matchedNegEMMu.mass());
 
 
-                    genW1.SetPtEtaPhiM(posWElMu.pt(),posWElMu.eta(),posWElMu.phi(),posWElMu.mass());
-                    genW2.SetPtEtaPhiM(negWElMu.pt(),negWElMu.eta(),negWElMu.phi(),negWElMu.mass());
+                        genW1.SetPtEtaPhiM(posWElMu.pt(),posWElMu.eta(),posWElMu.phi(),posWElMu.mass());
+                        genW2.SetPtEtaPhiM(negWElMu.pt(),negWElMu.eta(),negWElMu.phi(),negWElMu.mass());
 
-                    gent1.SetPtEtaPhiM(topElMu.pt(),topElMu.eta(),topElMu.phi(),topElMu.mass());
-                    gent2.SetPtEtaPhiM(antitopElMu.pt(),antitopElMu.eta(),antitopElMu.phi(),antitopElMu.mass());
-
-
-                    genttbar = gent1 + gent2;
-                    genPosLep.Boost(-genW1.BoostVector());
-                    genW1.Boost(-gent1.BoostVector());
+                        gent1.SetPtEtaPhiM(topElMu.pt(),topElMu.eta(),topElMu.phi(),topElMu.mass());
+                        gent2.SetPtEtaPhiM(antitopElMu.pt(),antitopElMu.eta(),antitopElMu.phi(),antitopElMu.mass());
 
 
-                    float gentheta1 = (genW1.Angle(genPosLep.Vect()));
-
-                    genNegLep.Boost(-genW2.BoostVector());
-                    genW2.Boost(-gent2.BoostVector());
-                    float gentheta2 = (genW2.Angle(genNegLep.Vect()));
-                    h_truthRecoElMu->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
-                    h_truthRecoCos->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
-                    h_truthRecoMTT->Fill(ttbar.M(),genttbar.M());
-                    h_truthRecoElMu->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
-                    h_truthRecoCos->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
-                    h_RecoMinusTruthCos->Fill(TMath::Cos(theta1)-TMath::Cos(gentheta1));
-                    h_RecoMinusTruthCos->Fill(TMath::Cos(theta2)-TMath::Cos(gentheta2));
-                    h_RecoMinusTruthMTT->Fill(ttbar.M() - genttbar.M());
+                        genttbar = gent1 + gent2;
+                        genPosLep.Boost(-genW1.BoostVector());
+                        genW1.Boost(-gent1.BoostVector());
 
 
+                        float gentheta1 = (genW1.Angle(genPosLep.Vect()));
+
+                        genNegLep.Boost(-genW2.BoostVector());
+                        genW2.Boost(-gent2.BoostVector());
+                        float gentheta2 = (genW2.Angle(genNegLep.Vect()));
+                        h_truthRecoElMu->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
+                        h_truthRecoCos->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
+                        h_truthRecoMTT->Fill(ttbar.M(),genttbar.M());
+                        h_truthRecoElMu->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
+                        h_truthRecoCos->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
+                        h_RecoMinusTruthCos->Fill(TMath::Cos(theta1)-TMath::Cos(gentheta1));
+                        h_RecoMinusTruthCos->Fill(TMath::Cos(theta2)-TMath::Cos(gentheta2));
+                        h_RecoMinusTruthMTT->Fill(ttbar.M() - genttbar.M());
 
 
+
+
+                    }
                 }
+
             }
+            //cout << "Am I here Now 2" <<endl;
+            h_Nevents_ATS->Fill(1,theWeight);
+            h_NeventsElMu_ATS->Fill(1,theWeight);
+            h_ATS_ptLepElMu->Fill(PosLep.Pt(),theWeight);
+            h_ATS_ptLepElMu->Fill(NegLep.Pt(),theWeight);
+            h_ATS_etaLepElMu->Fill(PosLep.Eta(),theWeight);
+            h_ATS_etaLepElMu->Fill(NegLep.Eta(),theWeight);
+            h_ATS_mLepElMu->Fill(dilepton.M(),theWeight);
+            h_ATS_METElMu->Fill(met.pt(),theWeight);
+            h_ATS_NBJetsElMu->Fill(bjets.size(),theWeight);
+            h_ATS_NJetsElMu->Fill(njets.size(),theWeight);
 
+            h_NBJetsElMu->Fill(bjets.size(),theWeight);
+            h_NBJetsDiLep->Fill(bjets.size(),theWeight);
         }
-        //cout << "Am I here Now 2" <<endl;
-        h_Nevents_ATS->Fill(1,theWeight);
-        h_NeventsElMu_ATS->Fill(1,theWeight);
-        h_ATS_ptLepElMu->Fill(PosLep.Pt(),theWeight);
-        h_ATS_ptLepElMu->Fill(NegLep.Pt(),theWeight);
-        h_ATS_etaLepElMu->Fill(PosLep.Eta(),theWeight);
-        h_ATS_etaLepElMu->Fill(NegLep.Eta(),theWeight);
-        h_ATS_mLepElMu->Fill(dilepton.M(),theWeight);
-        h_ATS_METElMu->Fill(met.pt(),theWeight);
-        h_ATS_NBJetsElMu->Fill(bjets.size(),theWeight);
-        h_ATS_NJetsElMu->Fill(njets.size(),theWeight);
 
-        h_NBJetsElMu->Fill(bjets.size(),theWeight);
-        h_NBJetsDiLep->Fill(bjets.size(),theWeight);
-    }
-
-    if(isMuEl)
-    {
-        // cout << "IM HERE! MuEl" << endl;
-        TLorentzVector W1;
-        TLorentzVector W2;
-        TLorentzVector t1;
-        TLorentzVector t2;
-        TLorentzVector ttbar;
-        TLorentzVector lepPos;
-        TLorentzVector lepNeg;
-        TLorentzVector BJet;
-        TLorentzVector BBJet;
-        TLorentzVector dilepton;
-        lepPos.SetPtEtaPhiE(posMu.pt(),posMu.eta(),posMu.phi(),posMu.energy());
-        lepNeg.SetPtEtaPhiE(negEl.pt(),negEl.eta(),negEl.phi(),negEl.energy());
-        BJet.SetPtEtaPhiE(bjets.at(0).pt(),bjets.at(0).eta(),bjets.at(0).phi(),bjets.at(0).energy());
-        BBJet.SetPtEtaPhiE(bjets.at(1).pt(),bjets.at(1).eta(),bjets.at(1).phi(),bjets.at(1).energy());
-
-
-        //        amwtsolver->SetConstraints(met.px(),met.py());
-
-        //        TtFullLepKinSolver::NeutrinoSolution nuSol=amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
-        amwtSolver->SetConstraints(met.px(),met.py());
-        TtAMWTSolver::NeutrinoSolution nuSol =  amwtSolver->NuSolver(lepPos,lepNeg,BJet,BBJet);
-        // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
-        dilepton = lepPos + lepNeg;
-        if(nuSol.neutrino.pt()> 0 && nuSol.neutrinoBar.pt() > 0 )
+        if(isMuEl)
         {
-            // cout << "what 0" << endl;
-            TLorentzVector nu;
-            TLorentzVector nuBar;
-            nu.SetPtEtaPhiM(nuSol.neutrino.pt(),nuSol.neutrino.eta(),nuSol.neutrino.phi(),nuSol.neutrino.mass());
-            nuBar.SetPtEtaPhiM(nuSol.neutrinoBar.pt(),nuSol.neutrinoBar.eta(),nuSol.neutrinoBar.phi(),nuSol.neutrinoBar.mass());
-            W1 = nu + lepPos;
-            W2 = nuBar + lepNeg;
-            // cout << "what 1" << endl;
-            h_yWElMu->Fill(W1.Rapidity(),theWeight);
-            h_yWElMu->Fill(W2.Rapidity(),theWeight);
-            h_yWDiLep->Fill(W1.Rapidity(),theWeight);
-            h_yWDiLep->Fill(W2.Rapidity(),theWeight);
-            h_ptWElMu->Fill(W1.Pt(),theWeight);
-            h_ptWElMu->Fill(W2.Pt(),theWeight);
-            h_ptWDiLep->Fill(W1.Pt(),theWeight);
-            h_ptWDiLep->Fill(W2.Pt(),theWeight);
-
-            t1 = W1 + BJet;
-            t2 = W2 + BBJet;
-            ttbar = t1 + t2;
-            // cout << "what 2" << endl;
-            h_yTElMu->Fill(t1.Rapidity(),theWeight);
-            h_yTElMu->Fill(t2.Rapidity(),theWeight);
-            h_yTDiLep->Fill(t1.Rapidity(),theWeight);
-            h_yTDiLep->Fill(t2.Rapidity(),theWeight);
-            h_ptTElMu->Fill(t1.Pt(),theWeight);
-            h_ptTElMu->Fill(t2.Pt(),theWeight);
-            h_ptTDiLep->Fill(t1.Pt(),theWeight);
-            h_ptTDiLep->Fill(t2.Pt(),theWeight);
-            h_mTTbarElMu->Fill(ttbar.M(),theWeight);
-            h_TTbarM->Fill(ttbar.M(),theWeight);
-
-            //++n_afterTop;
-            h_Nevents_top->Fill(1,theWeight);
-            h_NeventsElMu_top->Fill(1,theWeight);
-            RecoMTT.push_back(ttbar.M());
-            t_antinu.push_back(LorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
-            t_antinu_pt.push_back(nuBar.Pt());
-            t_antinu_eta.push_back(nuBar.Eta());
-            t_antinu_phi.push_back(nuBar.Phi());
-            t_antinu_e.push_back(nuBar.E());
-            t_nu.push_back(LorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
-            t_nu_pt.push_back(nu.Pt());
-            t_nu_eta.push_back(nu.Eta());
-            t_nu_phi.push_back(nu.Phi());
-            t_nu_e.push_back(nu.E());
-            t_antiW.push_back(LorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
-            t_antiW_pt.push_back(W2.Pt());
-            t_antiW_eta.push_back(W2.Eta());
-            t_antiW_phi.push_back(W2.Phi());
-            t_antiW_e.push_back(W2.E());
-            t_W.push_back(LorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
-            t_W_pt.push_back(W1.Pt());
-            t_W_eta.push_back(W1.Eta());
-            t_W_phi.push_back(W1.Phi());
-            t_W_e.push_back(W1.E());
-            t_antitop.push_back(LorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
-            t_antitop_pt.push_back(t2.Pt());
-            t_antitop_eta.push_back(t2.Eta());
-            t_antitop_phi.push_back(t2.Phi());
-            t_antitop_e.push_back(t2.E());
-            t_top.push_back(LorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
-            t_top_pt.push_back(t1.Pt());
-            t_top_eta.push_back(t1.Eta());
-            t_top_phi.push_back(t1.Phi());
-            t_top_e.push_back(t1.E());
+            // cout << "IM HERE! MuEl" << endl;
+            TLorentzVector W1;
+            TLorentzVector W2;
+            TLorentzVector t1;
+            TLorentzVector t2;
+            TLorentzVector ttbar;
+            TLorentzVector lepPos;
+            TLorentzVector lepNeg;
+            TLorentzVector BJet;
+            TLorentzVector BBJet;
+            TLorentzVector dilepton;
+            lepPos.SetPtEtaPhiE(posMu.pt(),posMu.eta(),posMu.phi(),posMu.energy());
+            lepNeg.SetPtEtaPhiE(negEl.pt(),negEl.eta(),negEl.phi(),negEl.energy());
+            BJet.SetPtEtaPhiE(bjets.at(0).pt(),bjets.at(0).eta(),bjets.at(0).phi(),bjets.at(0).energy());
+            BBJet.SetPtEtaPhiE(bjets.at(1).pt(),bjets.at(1).eta(),bjets.at(1).phi(),bjets.at(1).energy());
 
 
-            lepPos.Boost(-W1.BoostVector());
-            W1.Boost(-t1.BoostVector());
-            float theta1 = (W1.Angle(lepPos.Vect()));
-            RecoCos.push_back(TMath::Cos(theta1));
-            //            RecoCos.push_back(theta1);
-            h_cosElMu->Fill(TMath::Cos(theta1),theWeight);
-            h_cosDiLep->Fill(TMath::Cos(theta1),theWeight);
-            lepNeg.Boost(-W2.BoostVector());
-            W2.Boost(-t2.BoostVector());
-            float theta2 = (W2.Angle(lepNeg.Vect()));
-            RecoCos.push_back(TMath::Cos(theta2));
-            //            RecoCos.push_back(theta1);
-            h_cosElMu->Fill(TMath::Cos(theta2),theWeight);
-            h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
+            //        amwtsolver->SetConstraints(met.px(),met.py());
 
-
-            t_cos.push_back(TMath::Cos(theta1));
-            t_cos.push_back(TMath::Cos(theta2));
-
-            if(!isData)
+            //        TtFullLepKinSolver::NeutrinoSolution nuSol=amwtsolver->getNuSolution(lepPos,lepNeg,BJet,BBJet);
+            amwtSolver->SetConstraints(met.px(),met.py());
+            TtAMWTSolver::NeutrinoSolution nuSol =  amwtSolver->NuSolver(lepPos,lepNeg,BJet,BBJet);
+            // cout << nuSol.neutrino.p4() << " neutrino "<< endl;
+            dilepton = lepPos + lepNeg;
+            if(nuSol.neutrino.pt()> 0 && nuSol.neutrinoBar.pt() > 0 )
             {
-                TLorentzVector genW1;
-                TLorentzVector genW2;
-                TLorentzVector gent1;
-                TLorentzVector gent2;
-                TLorentzVector genttbar;
-                TLorentzVector genPosLep;
-                TLorentzVector genNegLep;
-                const pat::PackedGenParticle matchedPosEMMu = mse::getMatchedGenParticle(posMu, genColl,13);
+                // cout << "what 0" << endl;
+                TLorentzVector nu;
+                TLorentzVector nuBar;
+                nu.SetPtEtaPhiM(nuSol.neutrino.pt(),nuSol.neutrino.eta(),nuSol.neutrino.phi(),nuSol.neutrino.mass());
+                nuBar.SetPtEtaPhiM(nuSol.neutrinoBar.pt(),nuSol.neutrinoBar.eta(),nuSol.neutrinoBar.phi(),nuSol.neutrinoBar.mass());
+                W1 = nu + lepPos;
+                W2 = nuBar + lepNeg;
+                // cout << "what 1" << endl;
+                h_yWElMu->Fill(W1.Rapidity(),theWeight);
+                h_yWElMu->Fill(W2.Rapidity(),theWeight);
+                h_yWDiLep->Fill(W1.Rapidity(),theWeight);
+                h_yWDiLep->Fill(W2.Rapidity(),theWeight);
+                h_ptWElMu->Fill(W1.Pt(),theWeight);
+                h_ptWElMu->Fill(W2.Pt(),theWeight);
+                h_ptWDiLep->Fill(W1.Pt(),theWeight);
+                h_ptWDiLep->Fill(W2.Pt(),theWeight);
 
-                const reco::GenParticle posWElMu2 = mse::getMotherPacked(matchedPosEMMu);
-                const reco::GenParticle topElMu2 = mse::getMother(posWElMu2);
-                const pat::PackedGenParticle matchedNegEMEl = mse::getMatchedGenParticle(negEl, genColl,11);
-                const reco::GenParticle negWElMu2 = mse::getMotherPacked(matchedNegEMEl);
-                const reco::GenParticle antitopElMu2 = mse::getMother(negWElMu2);
-                if(matchedPosEMMu.pt()> 0 && matchedNegEMEl.pt() > 0 && posWElMu2.pdgId() == 24 && topElMu2.pdgId() == 6 && negWElMu2.pdgId() == -24 && antitopElMu2.pdgId() == -6  )
+                t1 = W1 + BJet;
+                t2 = W2 + BBJet;
+                ttbar = t1 + t2;
+                // cout << "what 2" << endl;
+                h_yTElMu->Fill(t1.Rapidity(),theWeight);
+                h_yTElMu->Fill(t2.Rapidity(),theWeight);
+                h_yTDiLep->Fill(t1.Rapidity(),theWeight);
+                h_yTDiLep->Fill(t2.Rapidity(),theWeight);
+                h_ptTElMu->Fill(t1.Pt(),theWeight);
+                h_ptTElMu->Fill(t2.Pt(),theWeight);
+                h_ptTDiLep->Fill(t1.Pt(),theWeight);
+                h_ptTDiLep->Fill(t2.Pt(),theWeight);
+                h_mTTbarElMu->Fill(ttbar.M(),theWeight);
+                h_TTbarM->Fill(ttbar.M(),theWeight);
+
+                //++n_afterTop;
+                h_Nevents_top->Fill(1,theWeight);
+                h_NeventsElMu_top->Fill(1,theWeight);
+                RecoMTT.push_back(ttbar.M());
+                t_antinu.push_back(myLorentzVector(nuBar.Pt(),nuBar.Eta(),nuBar.Phi(),nuBar.M()));
+                t_antinu_pt.push_back(nuBar.Pt());
+                t_antinu_eta.push_back(nuBar.Eta());
+                t_antinu_phi.push_back(nuBar.Phi());
+                t_antinu_e.push_back(nuBar.E());
+                t_nu.push_back(myLorentzVector(nu.Pt(),nu.Eta(),nu.Phi(),nu.M()));
+                t_nu_pt.push_back(nu.Pt());
+                t_nu_eta.push_back(nu.Eta());
+                t_nu_phi.push_back(nu.Phi());
+                t_nu_e.push_back(nu.E());
+                t_antiW.push_back(myLorentzVector(W2.Pt(),W2.Eta(),W2.Phi(),W2.M()));
+                t_antiW_pt.push_back(W2.Pt());
+                t_antiW_eta.push_back(W2.Eta());
+                t_antiW_phi.push_back(W2.Phi());
+                t_antiW_e.push_back(W2.E());
+                t_W.push_back(myLorentzVector(W1.Pt(),W1.Eta(),W1.Phi(),W1.M()));
+                t_W_pt.push_back(W1.Pt());
+                t_W_eta.push_back(W1.Eta());
+                t_W_phi.push_back(W1.Phi());
+                t_W_e.push_back(W1.E());
+                t_antitop.push_back(myLorentzVector(t2.Pt(),t2.Eta(),t2.Phi(),t2.M()));
+                t_antitop_pt.push_back(t2.Pt());
+                t_antitop_eta.push_back(t2.Eta());
+                t_antitop_phi.push_back(t2.Phi());
+                t_antitop_e.push_back(t2.E());
+                t_top.push_back(myLorentzVector(t1.Pt(),t1.Eta(),t1.Phi(),t1.M()));
+                t_top_pt.push_back(t1.Pt());
+                t_top_eta.push_back(t1.Eta());
+                t_top_phi.push_back(t1.Phi());
+                t_top_e.push_back(t1.E());
+
+
+                lepPos.Boost(-W1.BoostVector());
+                W1.Boost(-t1.BoostVector());
+                float theta1 = (W1.Angle(lepPos.Vect()));
+                RecoCos.push_back(TMath::Cos(theta1));
+                //            RecoCos.push_back(theta1);
+                h_cosElMu->Fill(TMath::Cos(theta1),theWeight);
+                h_cosDiLep->Fill(TMath::Cos(theta1),theWeight);
+                lepNeg.Boost(-W2.BoostVector());
+                W2.Boost(-t2.BoostVector());
+                float theta2 = (W2.Angle(lepNeg.Vect()));
+                RecoCos.push_back(TMath::Cos(theta2));
+                //            RecoCos.push_back(theta1);
+                h_cosElMu->Fill(TMath::Cos(theta2),theWeight);
+                h_cosDiLep->Fill(TMath::Cos(theta2),theWeight);
+
+
+                t_cos.push_back(TMath::Cos(theta1));
+                t_cos.push_back(TMath::Cos(theta2));
+
+                if(!isData)
                 {
-                    genPosLep.Clear();
-                    genNegLep.Clear();
-                    genW1.Clear();
-                    genW2.Clear();
-                    gent1.Clear();
-                    gent2.Clear();
-                    genttbar.Clear();
-                    genPosLep.SetPtEtaPhiM(matchedPosEMMu.pt(),matchedPosEMMu.eta(),matchedPosEMMu.phi(),matchedPosEMMu.mass());
-                    genNegLep.SetPtEtaPhiM(matchedNegEMEl.pt(),matchedNegEMEl.eta(),matchedNegEMEl.phi(),matchedNegEMEl.mass());
+                    TLorentzVector genW1;
+                    TLorentzVector genW2;
+                    TLorentzVector gent1;
+                    TLorentzVector gent2;
+                    TLorentzVector genttbar;
+                    TLorentzVector genPosLep;
+                    TLorentzVector genNegLep;
+                    const pat::PackedGenParticle matchedPosEMMu = mse::getMatchedGenParticle(posMu, genColl,13);
+
+                    const reco::GenParticle posWElMu2 = mse::getMotherPacked(matchedPosEMMu);
+                    const reco::GenParticle topElMu2 = mse::getMotherPacked(posWElMu2);
+                    const pat::PackedGenParticle matchedNegEMEl = mse::getMatchedGenParticle(negEl, genColl,11);
+                    const reco::GenParticle negWElMu2 = mse::getMotherPacked(matchedNegEMEl);
+                    const reco::GenParticle antitopElMu2 = mse::getMotherPacked(negWElMu2);
+                    if(matchedPosEMMu.pt()> 0 && matchedNegEMEl.pt() > 0 && posWElMu2.pdgId() == 24 && topElMu2.pdgId() == 6 && negWElMu2.pdgId() == -24 && antitopElMu2.pdgId() == -6  )
+                    {
+                        genPosLep.Clear();
+                        genNegLep.Clear();
+                        genW1.Clear();
+                        genW2.Clear();
+                        gent1.Clear();
+                        gent2.Clear();
+                        genttbar.Clear();
+                        genPosLep.SetPtEtaPhiM(matchedPosEMMu.pt(),matchedPosEMMu.eta(),matchedPosEMMu.phi(),matchedPosEMMu.mass());
+                        genNegLep.SetPtEtaPhiM(matchedNegEMEl.pt(),matchedNegEMEl.eta(),matchedNegEMEl.phi(),matchedNegEMEl.mass());
 
 
-                    genW1.SetPtEtaPhiM(posWElMu2.pt(),posWElMu2.eta(),posWElMu2.phi(),posWElMu2.mass());
-                    genW2.SetPtEtaPhiM(negWElMu2.pt(),negWElMu2.eta(),negWElMu2.phi(),negWElMu2.mass());
+                        genW1.SetPtEtaPhiM(posWElMu2.pt(),posWElMu2.eta(),posWElMu2.phi(),posWElMu2.mass());
+                        genW2.SetPtEtaPhiM(negWElMu2.pt(),negWElMu2.eta(),negWElMu2.phi(),negWElMu2.mass());
 
-                    gent1.SetPtEtaPhiM(topElMu2.pt(),topElMu2.eta(),topElMu2.phi(),topElMu2.mass());
-                    gent2.SetPtEtaPhiM(antitopElMu2.pt(),antitopElMu2.eta(),antitopElMu2.phi(),antitopElMu2.mass());
-
-
-                    genttbar = gent1 + gent2;
-                    genPosLep.Boost(-genW1.BoostVector());
-                    genW1.Boost(-gent1.BoostVector());
+                        gent1.SetPtEtaPhiM(topElMu2.pt(),topElMu2.eta(),topElMu2.phi(),topElMu2.mass());
+                        gent2.SetPtEtaPhiM(antitopElMu2.pt(),antitopElMu2.eta(),antitopElMu2.phi(),antitopElMu2.mass());
 
 
-                    float gentheta1 = (genW1.Angle(genPosLep.Vect()));
-
-                    genNegLep.Boost(-genW2.BoostVector());
-                    genW2.Boost(-gent2.BoostVector());
-                    float gentheta2 = (genW2.Angle(genNegLep.Vect()));
-                    h_truthRecoCos->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
-                    h_truthRecoMTT->Fill(ttbar.M(),genttbar.M());
-                    h_truthRecoCos->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
-                    h_RecoMinusTruthCos->Fill(TMath::Cos(theta1)-TMath::Cos(gentheta1));
-                    h_RecoMinusTruthCos->Fill(TMath::Cos(theta2)-TMath::Cos(gentheta2));
-                    h_RecoMinusTruthMTT->Fill(ttbar.M() - genttbar.M());
+                        genttbar = gent1 + gent2;
+                        genPosLep.Boost(-genW1.BoostVector());
+                        genW1.Boost(-gent1.BoostVector());
 
 
+                        float gentheta1 = (genW1.Angle(genPosLep.Vect()));
+
+                        genNegLep.Boost(-genW2.BoostVector());
+                        genW2.Boost(-gent2.BoostVector());
+                        float gentheta2 = (genW2.Angle(genNegLep.Vect()));
+                        h_truthRecoCos->Fill(TMath::Cos(theta1),TMath::Cos(gentheta1));
+                        h_truthRecoMTT->Fill(ttbar.M(),genttbar.M());
+                        h_truthRecoCos->Fill(TMath::Cos(theta2),TMath::Cos(gentheta2));
+                        h_RecoMinusTruthCos->Fill(TMath::Cos(theta1)-TMath::Cos(gentheta1));
+                        h_RecoMinusTruthCos->Fill(TMath::Cos(theta2)-TMath::Cos(gentheta2));
+                        h_RecoMinusTruthMTT->Fill(ttbar.M() - genttbar.M());
 
 
+
+
+                    }
                 }
+
             }
+            //cout << "Am I here Now 3" <<endl;
+            h_Nevents_ATS->Fill(1,theWeight);
+            h_NeventsElMu_ATS->Fill(1,theWeight);
+            h_ATS_ptLepElMu->Fill(PosLep.Pt(),theWeight);
+            h_ATS_ptLepElMu->Fill(NegLep.Pt(),theWeight);
+            h_ATS_etaLepElMu->Fill(PosLep.Eta(),theWeight);
+            h_ATS_etaLepElMu->Fill(NegLep.Eta(),theWeight);
+            h_ATS_mLepElMu->Fill(dilepton.M(),theWeight);
+            h_ATS_METElMu->Fill(met.pt(),theWeight);
+            h_ATS_NBJetsElMu->Fill(bjets.size(),theWeight);
+            h_ATS_NJetsElMu->Fill(njets.size(),theWeight);
 
+            h_NBJetsElMu->Fill(bjets.size(),theWeight);
+            h_NBJetsDiLep->Fill(bjets.size(),theWeight);
         }
-        //cout << "Am I here Now 3" <<endl;
-        h_Nevents_ATS->Fill(1,theWeight);
-        h_NeventsElMu_ATS->Fill(1,theWeight);
-        h_ATS_ptLepElMu->Fill(PosLep.Pt(),theWeight);
-        h_ATS_ptLepElMu->Fill(NegLep.Pt(),theWeight);
-        h_ATS_etaLepElMu->Fill(PosLep.Eta(),theWeight);
-        h_ATS_etaLepElMu->Fill(NegLep.Eta(),theWeight);
-        h_ATS_mLepElMu->Fill(dilepton.M(),theWeight);
-        h_ATS_METElMu->Fill(met.pt(),theWeight);
-        h_ATS_NBJetsElMu->Fill(bjets.size(),theWeight);
-        h_ATS_NJetsElMu->Fill(njets.size(),theWeight);
 
-        h_NBJetsElMu->Fill(bjets.size(),theWeight);
-        h_NBJetsDiLep->Fill(bjets.size(),theWeight);
     }
-
-    }    
-     t_outTree->Fill();
+    t_outTree->Fill();
     
     
     
@@ -3345,11 +3417,11 @@ else{
         const pat::PackedGenParticle matchedPosMu = mse::getMatchedGenParticle(posMu, genColl,13);
 
         const reco::GenParticle posWMuMu = mse::getMotherPacked(matchedPosMu);
-        const reco::GenParticle topMuMu = mse::getMother(posWMuMu);
+        const reco::GenParticle topMuMu = mse::getMotherPacked(posWMuMu);
         //        if(matchedPosMu.pt() != 0 )  cout << matchedPosMu.pt() << "muon match mother"<< posWMuMu.pdgId()<<"topMuMu Mother pdgId"<< topMuMu.pdgId() << endl;
         const pat::PackedGenParticle matchedNegMu = mse::getMatchedGenParticle(negMu, genColl,13);
         const reco::GenParticle negWMuMu = mse::getMotherPacked(matchedNegMu);
-        const reco::GenParticle antitopMuMu = mse::getMother(negWMuMu);
+        const reco::GenParticle antitopMuMu = mse::getMotherPacked(negWMuMu);
 
         if(matchedPosMu.pt()> 0 && matchedNegMu.pt() > 0 && posWMuMu.pdgId() == 24 && topMuMu.pdgId() == 6 && negWMuMu.pdgId() == -24 && antitopMuMu.pdgId() == -6  )
         {
@@ -3403,11 +3475,11 @@ else{
         const pat::PackedGenParticle matchedPosEl = mse::getMatchedGenParticle(posEl, genColl,11);
 
         const reco::GenParticle posWElEl = mse::getMotherPacked(matchedPosEl);
-        const reco::GenParticle topElEl = mse::getMother(posWElEl);
+        const reco::GenParticle topElEl = mse::getMotherPacked(posWElEl);
         //        if(matchedPosEl.pt() != 0 )  cout << matchedPosEl.pt() << "Elon match mother"<< posWElEl.pdgId()<<"topElEl Mother pdgId"<< topElEl.pdgId() << endl;
         const pat::PackedGenParticle matchedNegEl = mse::getMatchedGenParticle(negEl, genColl,11);
         const reco::GenParticle negWElEl = mse::getMotherPacked(matchedNegEl);
-        const reco::GenParticle antitopElEl = mse::getMother(negWElEl);
+        const reco::GenParticle antitopElEl = mse::getMotherPacked(negWElEl);
         if(matchedPosEl.pt()> 0 && matchedNegEl.pt() > 0 && posWElEl.pdgId() == 24 && topElEl.pdgId() == 6 && negWElEl.pdgId() == -24 && antitopElEl.pdgId() == -6  )
         {
             genPosLep.Clear();
@@ -3455,11 +3527,11 @@ else{
         const pat::PackedGenParticle matchedPosEMEl = mse::getMatchedGenParticle(posEl, genColl,11);
 
         const reco::GenParticle posWElMu = mse::getMotherPacked(matchedPosEMEl);
-        const reco::GenParticle topElMu = mse::getMother(posWElMu);
+        const reco::GenParticle topElMu = mse::getMotherPacked(posWElMu);
         //        if(matchedPosEl.pt() != 0 )  cout << matchedPosEMEl.pt() << "Elon match mother"<< posWElMu.pdgId()<<"topElEl Mother pdgId"<< topElMu.pdgId() << endl;
         const pat::PackedGenParticle matchedNegEMMu = mse::getMatchedGenParticle(negMu, genColl,13);
         const reco::GenParticle negWElMu = mse::getMotherPacked(matchedNegEMMu);
-        const reco::GenParticle antitopElMu = mse::getMother(negWElMu);
+        const reco::GenParticle antitopElMu = mse::getMotherPacked(negWElMu);
         if(matchedPosEMEl.pt() > 0 && matchedNegEMMu.pt() > 0 && posWElMu.pdgId() == 24 && topElMu.pdgId() == 6 && negWElMu.pdgId() == -24 && antitopElMu.pdgId() == -6  )
         {
             genPosLep.Clear();
@@ -3504,11 +3576,11 @@ else{
         const pat::PackedGenParticle matchedPosEMMu = mse::getMatchedGenParticle(posMu, genColl,13);
 
         const reco::GenParticle posWElMu2 = mse::getMotherPacked(matchedPosEMMu);
-        const reco::GenParticle topElMu2 = mse::getMother(posWElMu2);
+        const reco::GenParticle topElMu2 = mse::getMotherPacked(posWElMu2);
         //        if(matchedPosEl.pt() != 0 )  cout << matchedPosEMMu.pt() << "Elon match mother"<< posWElMu2.pdgId()<<"topElEl Mother pdgId"<< topElMu2.pdgId() << endl;
         const pat::PackedGenParticle matchedNegEMEl = mse::getMatchedGenParticle(negEl, genColl,11);
         const reco::GenParticle negWElMu2 = mse::getMotherPacked(matchedNegEMEl);
-        const reco::GenParticle antitopElMu2 = mse::getMother(negWElMu2);
+        const reco::GenParticle antitopElMu2 = mse::getMotherPacked(negWElMu2);
         if(matchedPosEMMu.pt()> 0 && matchedNegEMEl.pt() > 0 && posWElMu2.pdgId() == 24 && topElMu2.pdgId() == 6 && negWElMu2.pdgId() == -24 && antitopElMu2.pdgId() == -6  )
         {
             genPosLep.Clear();
@@ -3562,25 +3634,26 @@ else{
     if(DiMu)
     {
         if(!isDiMuon) return;
-        h_NeventsMuMu_ALS->Fill(1,theWeight);
+        h_NeventsMuMu_ALS->Fill(1,1.);
     }
     if(DiEl)
     {
         if(!isDiElectron) return;
-        h_NeventsElEl_ALS->Fill(1,theWeight);
+        h_NeventsElEl_ALS->Fill(1,1.);
     }
     if(ElMu)
     {
         if(!isElMu && !isMuEl) return;
-        h_NeventsElMu_ALS->Fill(1,theWeight);
+        h_NeventsElMu_ALS->Fill(1,1.);
     }
 
-    h_Nevents_ALS->Fill(1,theWeight);
-
+    h_Nevents_ALS->Fill(1,1.);
+theWeight = 1;
     /////////////////////2 Z Mass Veto //////////////////////////////////
     if(isDiMuon)
     {
         double w_ALS = w_posMu*w_negMu*w_mc*w_mm;
+        w_ALS = 1;
         PosLep.SetPtEtaPhiM(posMu.pt(),posMu.eta(),posMu.phi(),posMu.mass());
         NegLep.SetPtEtaPhiM(negMu.pt(),negMu.eta(),negMu.phi(),negMu.mass());
         DiLep = PosLep + NegLep;
@@ -3619,6 +3692,7 @@ else{
     if(isDiElectron)
     {
         double w_ALS = w_posEl*w_negEl*w_mc*w_ee;
+        w_ALS = 1;
         PosLep.SetPtEtaPhiM(posEl.pt(),posEl.eta(),posEl.phi(),posEl.mass());
         NegLep.SetPtEtaPhiM(negEl.pt(),negEl.eta(),negEl.phi(),negEl.mass());
         DiLep = PosLep + NegLep;
@@ -3659,6 +3733,7 @@ else{
     if(isElMu)
     {
         double w_ALS = w_posEl*w_negMu*w_mc*w_em;
+        w_ALS = 1;
         PosLep.SetPtEtaPhiM(posEl.pt(),posEl.eta(),posEl.phi(),posEl.mass());
         NegLep.SetPtEtaPhiM(negMu.pt(),negMu.eta(),negMu.phi(),negMu.mass());
         DiLep = PosLep + NegLep;
@@ -3694,6 +3769,7 @@ else{
     if(isMuEl)
     {
         double w_ALS = w_posMu*w_negEl*w_mc*w_em;
+        w_ALS = 1;
         PosLep.SetPtEtaPhiM(posMu.pt(),posMu.eta(),posMu.phi(),posMu.mass());
         NegLep.SetPtEtaPhiM(negEl.pt(),negEl.eta(),negEl.phi(),negEl.mass());
         DiLep = PosLep + NegLep;
@@ -3726,6 +3802,13 @@ else{
         h_ALS_ptLDiLep->Fill(negEl.pt(),w_ALS);
 
     }
+    ////////////////////4 METS PF1//////////////////////////
+
+    if(isDiMuon && met.pt() < 40) return;
+    if(isDiElectron && met.pt() < 40) return;
+    //if((isElMu || isMuEl) && met.pt() <0) return;
+    //++n_afterMet;
+    h_Nevents_AMS->Fill(1,theWeight);;
 
     ////////////////3 Minimal Jet Multiplicity //////////////////
     if(njets.size() < 2) return;
@@ -3859,13 +3942,7 @@ else{
     }
 
 
-    ////////////////////4 METS PF1//////////////////////////
 
-    if(isDiMuon && met.pt() < 40) return;
-    if(isDiElectron && met.pt() < 40) return;
-    //if((isElMu || isMuEl) && met.pt() <0) return;
-    //++n_afterMet;
-    h_Nevents_AMS->Fill(1,theWeight);;
 
     if(isDiMuon)
     {
@@ -4143,7 +4220,7 @@ else{
 
 
 
-   
+
 
 
 
@@ -4536,27 +4613,27 @@ void MiniAnalyzer::beginJob()
     t_outTree->Branch("phi_top","vector<double>",&t_top_phi);
     t_outTree->Branch("e_top","vector<double>",&t_top_e);
     
-     t_outTree->Branch("pt_antitop","vector<double>",&t_antitop_pt);
+    t_outTree->Branch("pt_antitop","vector<double>",&t_antitop_pt);
     t_outTree->Branch("eta_antitop","vector<double>",&t_antitop_eta);
     t_outTree->Branch("phi_antitop","vector<double>",&t_antitop_phi);
     t_outTree->Branch("e_antitop","vector<double>",&t_antitop_e);
     
-     t_outTree->Branch("pt_W","vector<double>",&t_W_pt);
+    t_outTree->Branch("pt_W","vector<double>",&t_W_pt);
     t_outTree->Branch("eta_W","vector<double>",&t_W_eta);
     t_outTree->Branch("phi_W","vector<double>",&t_W_phi);
     t_outTree->Branch("e_W","vector<double>",&t_W_e);
     
-     t_outTree->Branch("pt_antiW","vector<double>",&t_antiW_pt);
+    t_outTree->Branch("pt_antiW","vector<double>",&t_antiW_pt);
     t_outTree->Branch("eta_antiW","vector<double>",&t_antiW_eta);
     t_outTree->Branch("phi_antiW","vector<double>",&t_antiW_phi);
     t_outTree->Branch("e_antiW","vector<double>",&t_antiW_e);
     
-     t_outTree->Branch("pt_nu","vector<double>",&t_nu_pt);
+    t_outTree->Branch("pt_nu","vector<double>",&t_nu_pt);
     t_outTree->Branch("eta_nu","vector<double>",&t_nu_eta);
     t_outTree->Branch("phi_nu","vector<double>",&t_nu_phi);
     t_outTree->Branch("e_nu","vector<double>",&t_nu_e);
     
-     t_outTree->Branch("pt_antinu","vector<double>",&t_antinu_pt);
+    t_outTree->Branch("pt_antinu","vector<double>",&t_antinu_pt);
     t_outTree->Branch("eta_antinu","vector<double>",&t_antinu_eta);
     t_outTree->Branch("phi_antinu","vector<double>",&t_antinu_phi);
     t_outTree->Branch("e_antinu","vector<double>",&t_antinu_e);

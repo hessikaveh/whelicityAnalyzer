@@ -11,6 +11,101 @@ string TtAMWTSolver::getEnvVar( string const & key ) const
     char * val = getenv( key.c_str() );
     return val == NULL ? string("") : string(val);
 }
+
+double TtAMWTSolver::Cofactor(TMatrixD M, int i, int j)
+{
+    TMatrix Co(2,2);
+    TMatrix N(3,3);
+    N=M;
+    if(i==1 && j==1)
+    {
+        Co[0][0]=N[1][1];Co[0][1]=N[1][2];
+        Co[1][0]=N[2][1];Co[1][1]=N[2][2];
+
+    }
+    if(i==1 && j==2)
+    {
+        Co[0][0]=N[1][0];Co[0][1]=N[1][2];
+        Co[1][0]=N[2][0];Co[1][1]=N[2][2];
+
+    }
+    if(i==1 && j==3)
+    {
+        Co[0][0]=N[1][0];Co[0][1]=N[1][1];
+        Co[1][0]=N[2][0];Co[1][1]=N[2][1];
+
+    }
+    if(i==2 && j==1)
+    {
+        Co[0][0]=N[0][1];Co[0][1]=N[0][2];
+        Co[1][0]=N[2][1];Co[1][1]=N[2][2];
+
+    }
+    if(i==2 && j==2)
+    {
+        Co[0][0]=N[0][0];Co[0][1]=N[0][2];
+        Co[1][0]=N[2][0];Co[1][1]=N[2][2];
+
+    }
+    if(i==2 && j==3)
+    {
+        Co[0][0]=N[0][0];Co[0][1]=N[0][1];
+        Co[1][0]=N[2][0];Co[1][1]=N[2][1];
+
+    }
+    if(i==3 && j==1)
+    {
+        Co[0][0]=N[0][1];Co[0][1]=N[0][2];
+        Co[1][0]=N[1][1];Co[1][1]=N[1][2];
+
+    }
+    if(i==3 && j==2)
+    {
+        Co[0][0]=N[0][0];Co[0][1]=N[0][2];
+        Co[1][0]=N[1][0];Co[1][1]=N[1][2];
+
+    }
+    if(i==3 && j==3)
+    {
+        Co[0][0]=N[0][0];Co[0][1]=N[0][1];
+        Co[1][0]=N[1][0];Co[1][1]=N[1][1];
+
+    }
+    double cfctr = TMath::Power(-1,i+j) * ((Co[0][0] * Co[1][1]) - (Co[1][0] * Co[0][1])) ;
+    return cfctr;
+}
+
+TMatrixD TtAMWTSolver::factor_degenrate(TMatrixD G, int zero)
+{
+    TMatrixD L(2,3);
+    if(G[0][0] == 0 && G[1][1] == 0)
+    {
+        L[0][0]=G[0][1];L[0][2]=0;L[0][2]=G[1][2];
+        L[1][0]=0;L[1][2]=G[0][1];L[1][2]=G[0][2]-G[1][2];
+        return L;
+    }
+
+    bool SwapXY = fabs(G[0][0]) > fabs(G[1][1]);
+    TMatrixD Q(3,3);
+    if(SwapXY)
+    {
+        Q[0][0]=G[0][1];Q[0][1]=G[0][0];Q[0][2]=G[0][2];
+        Q[1][0]=G[1][1];Q[1][1]=G[1][0];Q[1][2]=G[1][2];
+        Q[2][0]=G[2][1];Q[2][1]=G[2][0];Q[2][2]=G[2][2];
+    }
+    else
+    {
+        Q=G;
+    }
+//	Q /= Q[1][1];
+    double q22 = Cofactor(Q,2,2);
+    if(-1*q22 < zero)
+    {
+
+    }
+    return L;
+
+}
 TtAMWTSolver::TtAMWTSolver(bool isData, const double b, const double e, const double s, const double mW, const double mB, const string ptRes, const string phiRes, const string sfRes):topmass_begin(b),
     topmass_end(e),
     topmass_step(s),
@@ -21,8 +116,8 @@ TtAMWTSolver::TtAMWTSolver(bool isData, const double b, const double e, const do
     e_com(13000)
 
 {
-    if (isData) nbrJetSmear = 500;
-    else nbrJetSmear = 500;
+    if (isData) nbrJetSmear = 100;
+    else nbrJetSmear = 100;
 //    cout << "Number of iterations: " << nbrJetSmear<<endl;
 
     //PDF Initialization
@@ -66,7 +161,9 @@ TtAMWTSolver::TtAMWTSolver(bool isData, const double b, const double e, const do
     h_Met = new TH2F("h_MET","",400,-400,400,400,-400,400);
     h_topMass = new TH1F("topMass","",100,172.4,173.1);
     f_out = TFile::Open("sanityCheckHistos.root","RECREATE");
-
+   // f_WMASS = TFile::Open("WMASS.root");
+  //  h_WMASS = (TH1F*) f_WMASS->Get("WMASS");
+// h_WMASS2 = (TH1F*) f_WMASS->Get("WMASS");
 
 }
 
@@ -108,6 +205,12 @@ TtAMWTSolver::NeutrinoSolution TtAMWTSolver::NuSolver(const TLorentzVector &LV_l
         {
 
 
+            double mt = rand3->BreitWigner(172.5,1);
+            double mat = rand3->BreitWigner(172.5,1);
+            double mtsm=172.5;
+            double mnu = 0;
+            double mW = mw;
+            //mW = h_WMASS->GetRandom();
             if (nbrJetSmear == 1) dont_smear_JetMET(jets_by_pt_sh, met_sh, jets_by_pt_sm, met_sm);
             else smear_JetMET(jets_by_pt_sh, met_sh, jets_by_pt_sm, met_sm, rand3, (LV_l + LV_l_));
 //        jet_energy_scale_factor.push_back(jets_by_pt_sm.at(0).Pt());
@@ -121,22 +224,50 @@ TtAMWTSolver::NeutrinoSolution TtAMWTSolver::NuSolver(const TLorentzVector &LV_l
             h_Met->Fill(met_sh.X(),met_sm.X());
             //loop on top mass parameter
             double weightmaxdum = -1;
-            double mt = 172.5;
+          //  double mt = 172.5;
 //            for(double mt = topmass_begin;
 //                    mt < topmass_end + 0.5*topmass_step;
 //                    mt += topmass_step)
             //  {
             double q_coeff[5], q_sol[4];
             // FindCoeff(LV_l, LV_l_, LV_b, LV_b_, mt, mt, pxmiss_, pymiss_, q_coeff);
-            FindCoeff(LV_l, LV_l_, jets_by_pt_sm[0], jets_by_pt_sm[1], mt, mt, met_sm.X(), met_sm.Y(), q_coeff);
+            FindCoeff(LV_l, LV_l_, jets_by_pt_sm[0], jets_by_pt_sm[1], mt, mat, met_sm.X(), met_sm.Y(), q_coeff);
             int NSol = quartic(q_coeff, q_sol);
 
+            //Starting neutrino solution objects
+            NeutrinoEllipseCalculator* NuEl = new NeutrinoEllipseCalculator(jets_by_pt_sm[0],LV_l,mtsm,mW,mnu);
+            NeutrinoEllipseCalculator* NuBarEl = new NeutrinoEllipseCalculator(jets_by_pt_sm[1],LV_l_,mtsm,mW,mnu);
+
+            TMatrixD S(3,3);
+            S.Zero();
+            S[0][0]=-1;S[0][1]=0;S[0][2]=met_sm.X();
+            S[1][0]=0;S[1][1]=-1;S[1][2]=met_sm.Y();
+            S[2][0]=0;S[2][1]=0;S[2][2]=1;
+            TMatrixD N,N_;
+            bool b_Invertible = true;
+            //try
+            //{
+            //N = NuEl->getNeutrinoEllipse();
+            //N_ = NuBarEl->getNeutrinoEllipse();
+            //cout << " Invertible! *************"<<endl;
+
+            //}
+            //catch(...)
+            //{
+               // cout << "Non Invertible!"<<endl;
+              //  b_Invertible = false;
+               // continue;
+           // }
+            //if(b_Invertible)
+            //{
+            //TMatrixD n_ = TMatrixD(S,TMatrixD::kTransposeMult,TMatrixD(N_,TMatrixD::kMult,S));
+            //}
             //loop on all solutions
             for (int isol = 0; isol < NSol; isol++)
             {
                 //TopRec(LV_l, LV_l_, LV_b, LV_b_, q_sol[isol]);
                 TopRec(LV_l, LV_l_, jets_by_pt_sm[0], jets_by_pt_sm[1], q_sol[isol]);
-                double weight = get_weight(jets_by_pt_sm[0],jets_by_pt_sm[1],LV_l,LV_l_,LV_n,LV_n_,mt);
+                double weight = fabs(get_weight(jets_by_pt_sm[0],jets_by_pt_sm[1],LV_l,LV_l_,LV_n,LV_n_,mtsm));
 //		cout <<"weight of mt answer: " <<  weight << endl;
                 h_topMass->Fill(mt,weight);
                 if (weight > weightmaxdum)
@@ -238,8 +369,8 @@ double TtAMWTSolver::get_dalitz_prob(const TLorentzVector & lep, const TLorentzV
     double mw2 = mw * mw;
     double mt2_mb2 = mt2 - mb2;
 
-    return 4. * mte * ( mt2 - mb2 - 2. * mte ) /
-           ( mt2_mb2 * mt2_mb2 + mw2 * ( mt2 + mb2 ) - 2. * mw2 * mw2 );
+    return 4. * mt*lep.E() * ( mt2 - mb2 - 2. * mt*lep.E() ) /
+           ( mt2_mb2 * mt2_mb2 + mw2 * ( mt2 - mb2 ) - 2. * mw2 * mw2 );
 }
 
 double TtAMWTSolver::get_2bjet_prob(const TLorentzVector & jet1, const TLorentzVector & jet2,
@@ -334,10 +465,10 @@ void TtAMWTSolver::smear_JetMET(const vector <TLorentzVector> & orig_jets, const
         double sigma = jet_resPt;// * std::sqrt(jer_sf * jer_sf - 1);
         double sigma2 = jet_resPhi;
 //        cout<< sigma <<endl;
-        std::normal_distribution<> d(0, sigma);
+        std::normal_distribution<> d(0, sigma*std::sqrt(std::max(jer_sf*jer_sf -1,0.)));
         std::normal_distribution<> l(0,sigma2);
 //        cout << d(e2)<< endl;
-        smearFactorPt = 1. + d(e2)*std::sqrt(std::max(jer_sf*jer_sf -1,0.));
+        smearFactorPt = 1. + d(e2);
         smearFactorPhi = 1.+ l(e2);
 
         Pt_sm = orig_jets.at(sui).Pt()*smearFactorPt;
@@ -362,7 +493,7 @@ void TtAMWTSolver::smear_JetMET(const vector <TLorentzVector> & orig_jets, const
 //    h_SmearF->Fill(jet_energy_scale_factor[1]);
 
     //10% resolution
-    std::normal_distribution<> t(0, 0.10);
+    std::normal_distribution<> t(0, 1);
     double MetSmear = t(e2);
     double unclust_metx_sm = unclust_metx * (1 + MetSmear );
     double unclust_mety_sm = unclust_mety * (1 + MetSmear );
@@ -390,9 +521,20 @@ void TtAMWTSolver::FindCoeff(const TLorentzVector &al, const TLorentzVector &l, 
     D = -al.Py()-b_al.Py()-l.Py()-b_l.Py() + py_miss;
 
     // right side of first two linear equations - missing pT
+    double m1w = rand3->BreitWigner(80.4,1);
+    double m2w = rand3->BreitWigner(80.4,1);
 
-    E = (sqr(mt)-sqr(mw)-sqr(mb))/(2*b_al.E())-sqr(mw)/(2*al.E())-al.E()+al.Px()*b_al.Px()/b_al.E()+al.Py()*b_al.Py()/b_al.E()+al.Pz()*b_al.Pz()/b_al.E();
-    F = (sqr(mat)-sqr(mw)-sqr(mb))/(2*b_l.E())-sqr(mw)/(2*l.E())-l.E()+l.Px()*b_l.Px()/b_l.E()+l.Py()*b_l.Py()/b_l.E()+l.Pz()*b_l.Pz()/b_l.E();
+
+    //double m1w = h_WMASS->GetRandom();
+    //cout << m1w << endl;
+
+   // double m2w =h_WMASS2->GetRandom();
+   // cout << m2w << endl;
+
+   // double m1b = rand3->BreitWigner(4.8,1);
+   // double m2b = rand3->BreitWigner(4.8,1);
+    E = (sqr(mt)-sqr(m2w)-sqr(mb))/(2*b_al.E())-sqr(m2w)/(2*al.E())-al.E()+al.Px()*b_al.Px()/b_al.E()+al.Py()*b_al.Py()/b_al.E()+al.Pz()*b_al.Pz()/b_al.E();
+    F = (sqr(mat)-sqr(m1w)-sqr(mb))/(2*b_l.E())-sqr(m1w)/(2*l.E())-l.E()+l.Px()*b_l.Px()/b_l.E()+l.Py()*b_l.Py()/b_l.E()+l.Pz()*b_l.Pz()/b_l.E();
 
     m1 = al.Px()/al.E()-b_al.Px()/b_al.E();
     m2 = al.Py()/al.E()-b_al.Py()/b_al.E();
@@ -407,9 +549,9 @@ void TtAMWTSolver::FindCoeff(const TLorentzVector &al, const TLorentzVector &l, 
     apom2 = sqr(al.Py())-sqr(al.E());
     apom3 = sqr(al.Pz())-sqr(al.E());
 
-    k11 = 1/sqr(al.E())*(pow(mw,4)/4+sqr(C)*apom1+sqr(D)*apom2+apom3*sqr(pom)/sqr(m3)+sqr(mw)*(al.Px()*C+al.Py()*D+al.Pz()*pom/m3)+2*al.Px()*al.Py()*C*D+2*al.Px()*al.Pz()*C*pom/m3+2*al.Py()*al.Pz()*D*pom/m3);
-    k21 = 1/sqr(al.E())*(-2*C*m3*n3*apom1+2*apom3*n3*m1*pom/m3-sqr(mw)*m3*n3*al.Px()+sqr(mw)*m1*n3*al.Pz()-2*al.Px()*al.Py()*D*m3*n3+2*al.Px()*al.Pz()*C*m1*n3-2*al.Px()*al.Pz()*n3*pom+2*al.Py()*al.Pz()*D*m1*n3);
-    k31 = 1/sqr(al.E())*(-2*D*m3*n3*apom2+2*apom3*n3*m2*pom/m3-sqr(mw)*m3*n3*al.Py()+sqr(mw)*m2*n3*al.Pz()-2*al.Px()*al.Py()*C*m3*n3+2*al.Px()*al.Pz()*C*m2*n3-2*al.Py()*al.Pz()*n3*pom+2*al.Py()*al.Pz()*D*m2*n3);
+    k11 = 1/sqr(al.E())*(pow(m2w,4)/4+sqr(C)*apom1+sqr(D)*apom2+apom3*sqr(pom)/sqr(m3)+sqr(m2w)*(al.Px()*C+al.Py()*D+al.Pz()*pom/m3)+2*al.Px()*al.Py()*C*D+2*al.Px()*al.Pz()*C*pom/m3+2*al.Py()*al.Pz()*D*pom/m3);
+    k21 = 1/sqr(al.E())*(-2*C*m3*n3*apom1+2*apom3*n3*m1*pom/m3-sqr(m2w)*m3*n3*al.Px()+sqr(m2w)*m1*n3*al.Pz()-2*al.Px()*al.Py()*D*m3*n3+2*al.Px()*al.Pz()*C*m1*n3-2*al.Px()*al.Pz()*n3*pom+2*al.Py()*al.Pz()*D*m1*n3);
+    k31 = 1/sqr(al.E())*(-2*D*m3*n3*apom2+2*apom3*n3*m2*pom/m3-sqr(m2w)*m3*n3*al.Py()+sqr(m2w)*m2*n3*al.Pz()-2*al.Px()*al.Py()*C*m3*n3+2*al.Px()*al.Pz()*C*m2*n3-2*al.Py()*al.Pz()*n3*pom+2*al.Py()*al.Pz()*D*m2*n3);
     k41 = 1/sqr(al.E())*(2*apom3*m1*m2*sqr(n3)+2*al.Px()*al.Py()*sqr(m3)*sqr(n3)-2*al.Px()*al.Pz()*m2*m3*sqr(n3)-2*al.Py()*al.Pz()*m1*m3*sqr(n3));
     k51 = 1/sqr(al.E())*(apom1*sqr(m3)*sqr(n3)+apom3*sqr(m1)*sqr(n3)-2*al.Px()*al.Pz()*m1*m3*sqr(n3));
     k61 = 1/sqr(al.E())*(apom2*sqr(m3)*sqr(n3)+apom3*sqr(m2)*sqr(n3)-2*al.Py()*al.Pz()*m2*m3*sqr(n3));
@@ -418,9 +560,9 @@ void TtAMWTSolver::FindCoeff(const TLorentzVector &al, const TLorentzVector &l, 
     cpom2 = sqr(l.Py())-sqr(l.E());
     cpom3 = sqr(l.Pz())-sqr(l.E());
 
-    l11 = 1/sqr(l.E())*(pow(mw,4)/4+cpom3*sqr(F)/sqr(n3)+sqr(mw)*l.Pz()*F/n3);
-    l21 = 1/sqr(l.E())*(-2*cpom3*F*m3*n1/n3+sqr(mw)*(l.Px()*m3*n3-l.Pz()*n1*m3)+2*l.Px()*l.Pz()*F*m3);
-    l31 = 1/sqr(l.E())*(-2*cpom3*F*m3*n2/n3+sqr(mw)*(l.Py()*m3*n3-l.Pz()*n2*m3)+2*l.Py()*l.Pz()*F*m3);
+    l11 = 1/sqr(l.E())*(pow(m1w,4)/4+cpom3*sqr(F)/sqr(n3)+sqr(m1w)*l.Pz()*F/n3);
+    l21 = 1/sqr(l.E())*(-2*cpom3*F*m3*n1/n3+sqr(m1w)*(l.Px()*m3*n3-l.Pz()*n1*m3)+2*l.Px()*l.Pz()*F*m3);
+    l31 = 1/sqr(l.E())*(-2*cpom3*F*m3*n2/n3+sqr(m1w)*(l.Py()*m3*n3-l.Pz()*n2*m3)+2*l.Py()*l.Pz()*F*m3);
     l41 = 1/sqr(l.E())*(2*cpom3*n1*n2*sqr(m3)+2*l.Px()*l.Py()*sqr(m3)*sqr(n3)-2*l.Px()*l.Pz()*n2*n3*sqr(m3)-2*l.Py()*l.Pz()*n1*n3*sqr(m3));
     l51 = 1/sqr(l.E())*(cpom1*sqr(m3)*sqr(n3)+cpom3*sqr(n1)*sqr(m3)-2*l.Px()*l.Pz()*n1*n3*sqr(m3));
     l61 = 1/sqr(l.E())*(cpom2*sqr(m3)*sqr(n3)+cpom3*sqr(n2)*sqr(m3)-2*l.Py()*l.Pz()*n2*n3*sqr(m3));

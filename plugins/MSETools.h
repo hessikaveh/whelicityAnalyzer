@@ -14,7 +14,6 @@
 
 
 
-typedef math::XYZTLorentzVector LorentzVector;
 
 namespace mse
 {
@@ -30,6 +29,8 @@ const pat::PackedGenParticle getMatchedGenParticle(const pat::GenericParticle &,
 //const pat::PackedGenParticle getMatchedGenParticle(const pat::GenericParticle &, const edm::View<pat::PackedGenParticle>&, int absPdgId);
 
 const reco::GenParticle getMotherPacked(const pat::PackedGenParticle&);
+const reco::GenParticle getMotherPacked(const reco::GenParticle&);
+
 const reco::GenParticle getMother(const reco::GenParticle&);
 //const reco::GenJet match(pat::Jet jet, double resolution,const reco::GenJetCollection m_genJets);
 

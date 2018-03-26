@@ -22,8 +22,17 @@ process.GlobalTag.globaltag = '80X_mcRun2_asymptotic_2016_TrancheIV_v6'
 readFiles = cms.untracked.vstring()
 secFiles = cms.untracked.vstring() 
 process.source = cms.Source ("PoolSource",fileNames = readFiles)
-readFiles.extend( ['file:/cmsdata3/kaveh/workarea/16E7A136-1FBE-E611-B8DA-0025905C3DD0.root'
+readFiles.extend( ['root://xrootd-cms.infn.it//store/mc/RunIISummer16MiniAODv2/TT_TuneCUETP8M2T4_13TeV-powheg-pythia8/MINIAODSIM/PUMoriond17_80X_mcRun2_asymptotic_2016_TrancheIV_v6-v1/50000/36CDAE89-B3BE-E611-B022-0025905B8604.root'
 ]);
+# Bad Charged Hadron and Bad Muon Filters from MiniAOD
+#process.load('RecoMET.METFilters.metFilters_cff')
+process.load('RecoMET.METFilters.BadPFMuonFilter_cfi')
+process.BadPFMuonFilter.muons = cms.InputTag("slimmedMuons")
+process.BadPFMuonFilter.PFCandidates = cms.InputTag("packedPFCandidates")
+
+process.load('RecoMET.METFilters.BadChargedCandidateFilter_cfi')
+process.BadChargedCandidateFilter.muons = cms.InputTag("slimmedMuons")
+process.BadChargedCandidateFilter.PFCandidates = cms.InputTag("packedPFCandidates")
 
 #
 # Set up electron ID (VID framework)
@@ -59,5 +68,7 @@ process.TFileService = cms.Service("TFileService",
 )
 
 # Make sure to add the ID sequence upstream from the user analysis module
-process.p = cms.Path( process.egmGsfElectronIDSequence * process.Whelicity)
-
+process.p = cms.Path(process.BadPFMuonFilter           *
+					 process.BadChargedCandidateFilter * 
+					 process.egmGsfElectronIDSequence  * 
+					 process.Whelicity                   )

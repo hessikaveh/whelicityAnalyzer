@@ -1,2 +1,0 @@
-/usr/bin/ar qc libmy.a  CMakeFiles/my.dir/MiniAnalyzer.cc.o CMakeFiles/my.dir/ttamwtsolver.cpp.o CMakeFiles/my.dir/MSETools.cc.o
-/usr/bin/ranlib libmy.a

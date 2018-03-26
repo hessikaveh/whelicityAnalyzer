@@ -16,8 +16,8 @@
 #include <TFile.h>
 #include "TLorentzVector.h"
 #include "TMath.h"
-
 #include <LHAPDF/LHAPDF.h>
+#include "NeutrinoEllipseCalculator.h"
 
 using namespace std;
 
@@ -79,7 +79,7 @@ private:
     ///
     const double topmass_step;
     ///
-    const double mw;
+     double mw;
     ///
     const double mb;
     ///
@@ -132,7 +132,13 @@ private:
     double get_top_pt_prob(const double pt) const;
     double get_2bjet_prob(const TLorentzVector &jet1, const TLorentzVector &jet2, map<double, double> &mapJetPhi2Discr) const;
     string getEnvVar(const string &key) const;
+    double Cofactor(TMatrixD M,int i, int j);
+    TMatrixD factor_degenrate(TMatrixD G,int zero=0);
     TFile* f_out;
+   // TH1F* h_WMASS;
+  //  TH1F* h_WMASS2;
+
+//    TFile* f_WMASS;
 };
 
 #endif // TTAMWTSOLVER_H

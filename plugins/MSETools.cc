@@ -1,6 +1,8 @@
 #include "MSETools.h"
 #include "DataFormats/Math/interface/deltaR.h"
 #include "Math/VectorUtil.h"
+typedef math::XYZTLorentzVector LorentzVector;
+
 
 const char* mse::enumNames[4] = {"prompt", "hf", "lf", "other"};
 
@@ -135,7 +137,22 @@ const reco::GenParticle mse::getMotherPacked(const pat::PackedGenParticle& pgp)
 
     return reco::GenParticle();
 }
+const reco::GenParticle mse::getMotherPacked(const reco::GenParticle& pgp)
+{
+    if (pgp.numberOfMothers() > 0)
+    {
+        const reco::GenParticle* firstMother = (const reco::GenParticle*)pgp.mother(0);
+        if (firstMother != 0)
+        {
+            if (firstMother->pdgId() != pgp.pdgId()) return (*firstMother);
+            const reco::GenParticle newMother = mse::getMother(*firstMother);
+            return newMother;
+        }
+        else return reco::GenParticle();
+    }
 
+    return reco::GenParticle();
+}
 
 const reco::GenParticle mse::getMother(const reco::GenParticle& gp)
 {
